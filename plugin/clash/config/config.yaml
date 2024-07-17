@@ -25,15 +25,13 @@ rules:
 
   - DOMAIN,ad.com,REJECT
   - DOMAIN-SUFFIX,google.com,aliyun-1
-  - DOMAIN-KEYWORD,google,fake-ip
-  - DOMAIN-REGEX,^abc.*com,fake-ip
-  - GEOSITE,youtube,fake-ip
+  #- DOMAIN-KEYWORD,google,fake-ip
+  #- DOMAIN-REGEX,^abc.*com,fake-ip
+  #- GEOSITE,youtube,fake-ip
 
-  - SRC-GEOIP,cn,DIRECT
-  - SRC-IP-ASN,9808,DIRECT
   - SRC-IP-CIDR,192.168.1.201/32,DIRECT
   - SRC-IP-SUFFIX,192.168.1.201/8,DIRECT
-  - SRC-PORT,7777,DIRECT
+  #- SRC-PORT,7777,DIRECT
 
   - IN-PORT,7890,PROXY
   - IN-TYPE,SOCKS/HTTP,PROXY
@@ -42,7 +40,8 @@ rules:
 
   - RULE-SET,providername,proxy
 
-  - IF-ELSE,direct,final-condition,fake-ip
+  - IF-ELSE,aliyun-1,final-condition,fake-ip
+  - FINAL,aliyun-1
 
 conditions:
   - final-condition:

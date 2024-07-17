@@ -19,7 +19,7 @@ type UdpOption struct {
 
 func (ns *UdpNs) Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
 	resp, rtt, err := ns.client.Exchange(msg, ns.pureAddr)
-	clog.Infof("request [%s] rtt: %s", msg.Question[0].Name, rtt)
+	clog.Infof("query: [%s], rtt: %s", msg.Question[0].Name, rtt)
 	return resp, err
 }
 

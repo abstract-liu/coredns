@@ -49,7 +49,7 @@ func UpdateNameservers(newNameservers map[string]adapter.Nameserver) {
 }
 
 func logMatchData(msg *dns.Msg, ns adapter.Nameserver, r rule.Rule) {
-	log.Debug("%s %s %s", msg.Question[0].Name, r.RuleType().String(), ns.Name())
+	log.Infof("query: [%s], match rule: [%s], use ns: [%s]", msg.Question[0].Name, r.RuleType().String(), ns.Name())
 }
 
 func resolveDnsMsg(r *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) {
