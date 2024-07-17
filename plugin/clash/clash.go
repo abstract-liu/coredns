@@ -1,10 +1,10 @@
 package clash
 
-import "C"
 import (
 	"context"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/config"
 	"github.com/coredns/coredns/plugin/clash/tunnel"
 	"github.com/miekg/dns"
 )
@@ -14,7 +14,13 @@ func NewClash(cfg *PluginConfig) (*Clash, error) {
 		config: cfg,
 		tunnel: &tunnel.GlobalTunnel,
 	}
+	applyConfig(cfg.clashConfig)
 	return c, nil
+}
+
+func applyConfig(cfg *config.ClashConfig) {
+	tunnel.UpdateRules(cfg.Rules)
+	tunnel.UpdateNameservers(cfg.Nameservers)
 }
 
 type Clash struct {

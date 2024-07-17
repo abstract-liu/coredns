@@ -26,11 +26,8 @@ var _defaultRawConfig = RawClashConfig{
 }
 
 type ClashConfig struct {
-	nameservers map[string]adapter.Nameserver
-	rules       []Rule
-}
-
-type Rule interface {
+	Nameservers map[string]adapter.Nameserver
+	Rules       []R.Rule
 }
 
 type RawClashConfig struct {
@@ -74,13 +71,13 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.nameservers = nameservers
+	cfg.Nameservers = nameservers
 
 	rules, err := parseRules(rawCfg.Rules, nameservers)
 	if err != nil {
 		return nil, err
 	}
-	cfg.rules = rules
+	cfg.Rules = rules
 
 	return cfg, nil
 }
@@ -88,7 +85,7 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 func parseNameservers(cfg *RawClashConfig) (nameservers map[string]adapter.Nameserver, err error) {
 	nameservers = make(map[string]adapter.Nameserver)
 
-	// parse nameservers
+	// parse Nameservers
 	for idx, mapping := range cfg.Nameservers {
 		ns, err := adapter.ParseNameserver(mapping)
 		if err != nil {
@@ -113,10 +110,10 @@ func parseNameservers(cfg *RawClashConfig) (nameservers map[string]adapter.Names
 	return nameservers, nil
 }
 
-func parseRules(rulesConfig []string, nameservers map[string]adapter.Nameserver) ([]Rule, error) {
-	var rules []Rule
+func parseRules(rulesConfig []string, nameservers map[string]adapter.Nameserver) ([]R.Rule, error) {
+	var rules []R.Rule
 
-	// parse rules
+	// parse Rules
 	// rule in format: ruleType(aka:ruleName), payload, target, params...
 	for idx, line := range rulesConfig {
 		rule := common.TrimArr(strings.Split(line, ","))

@@ -1,5 +1,6 @@
 package tunnel
 
+import "C"
 import (
 	"context"
 	"github.com/coredns/coredns/plugin/clash/adapter"
@@ -35,6 +36,18 @@ func (t *Tunnel) Handle(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
 	return ns.Query(ctx, msg)
 }
 
+func UpdateRules(newRules []rule.Rule) {
+	configMux.Lock()
+	rules = newRules
+	configMux.Unlock()
+}
+
+func UpdateNameservers(newNameservers map[string]adapter.Nameserver) {
+	configMux.Lock()
+	nameservers = newNameservers
+	configMux.Unlock()
+}
+
 func logMatchData(msg *dns.Msg, ns adapter.Nameserver, r rule.Rule) {
 	log.Debug("%s %s %s", msg.Question[0].Name, r.RuleType().String(), ns.Name())
 }
@@ -60,7 +73,7 @@ func match(msg *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) {
 		}
 	*/
 
-	if len(msg.Question) != 0 {
+	if len(msg.Question) != 1 {
 		log.Error("dns query more than one")
 		return nameservers["DIRECT"], nil, nil
 	}

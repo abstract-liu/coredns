@@ -82,10 +82,11 @@ func parsePluginConfig(c *caddy.Controller) (*PluginConfig, error) {
 		return nil, c.Errf("invalid number of config files: %d", len(args))
 	}
 	configFilename := args[0]
-
+	pluginConfig.path = configFilename
 	if !filepath.IsAbs(configFilename) && config.Root != "" {
 		pluginConfig.path = filepath.Join(config.Root, configFilename)
 	}
+
 	s, err := os.Stat(pluginConfig.path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -98,8 +99,9 @@ func parsePluginConfig(c *caddy.Controller) (*PluginConfig, error) {
 		log.Warningf("Clash config file %q is a directory", pluginConfig.path)
 	}
 
-	if nil != readClashConfig(pluginConfig) {
-		return nil, c.Errf("unable to parse clash config file '%s'", pluginConfig.path)
+	err = readClashConfig(pluginConfig)
+	if nil != err {
+		return nil, c.Errf("unable to parse clash config file '%s', %v", pluginConfig.path, err)
 	}
 
 	return pluginConfig, nil

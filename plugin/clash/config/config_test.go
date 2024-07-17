@@ -15,7 +15,7 @@ func TestParse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(config.nameservers) != 4 {
-		t.Fatalf("expected 4 nameserver, got %d", len(config.nameservers))
+	if len(config.Nameservers) != 4 {
+		t.Fatalf("expected 4 nameserver, got %d", len(config.Nameservers))
 	}
 }

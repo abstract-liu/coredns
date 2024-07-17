@@ -3,6 +3,7 @@ package common
 import (
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/miekg/dns"
+	"strings"
 )
 
 type Domain struct {
@@ -20,13 +21,19 @@ func (d *Domain) Adapter() string {
 }
 
 func (d *Domain) Match(msg *dns.Msg) (bool, string) {
-	return msg.Question[0] == d.domain, d.adapter
+	return msg.Question[0].Name == d.domain, d.adapter
 }
 
 func NewDomain(domain string, adapter string) *Domain {
+	var domainWithRoot string
+	if strings.HasSuffix(domain, ".") {
+		domainWithRoot = domain
+	} else {
+		domainWithRoot = domain + "."
+	}
 	return &Domain{
 		Base:    &Base{},
-		domain:  domain,
+		domain:  domainWithRoot,
 		adapter: adapter,
 	}
 }
