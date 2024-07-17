@@ -59,7 +59,7 @@ func Parse(buf []byte) (*ClashConfig, error) {
 
 func UnmarshalRawConfig(buf []byte) (*RawClashConfig, error) {
 	rawCfg := _defaultRawConfig
-	err := yaml.Unmarshal(buf, rawCfg)
+	err := yaml.Unmarshal(buf, &rawCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +147,9 @@ func parseRules(rulesConfig []string, nameservers map[string]adapter.Nameserver)
 
 		params = common.TrimArr(params)
 		parsed, parseErr := R.ParseRule(ruleName, payload, target, params)
+		if parsed == nil {
+			continue
+		}
 		if parseErr != nil {
 			return nil, fmt.Errorf("Rule[%d] [%s] error: %s", idx, line, parseErr.Error())
 		}

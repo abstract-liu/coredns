@@ -1,0 +1,52 @@
+nameservers:
+  - name: "aliyun-1"
+    address: "udp://223.5.5.5:53"
+  - name: "aliyun-2"
+    address: "udp://223.6.6.6:53"
+  - name: "cloudflare"
+    address: "tls://1.1.1.1"
+    tls_servername: "1dot1dot1dot1.cloudflare-dns.com"
+  - name: "fake-ip"
+    address: "udp://192.168.2.4"
+
+nameserver-groups:
+  - name: "direct"
+    type: balance
+    nameservers:
+      - aliyun-1
+      - aliyun-2
+  - name: "true"
+    type: fast
+    nameservers:
+      - cloudflare
+
+rules:
+  - TYPE,q65,REJECT
+
+  - DOMAIN,ad.com,REJECT
+  - DOMAIN-SUFFIX,google.com,fake-ip
+  - DOMAIN-KEYWORD,google,fake-ip
+  - DOMAIN-REGEX,^abc.*com,fake-ip
+  - GEOSITE,youtube,fake-ip
+
+  - SRC-GEOIP,cn,DIRECT
+  - SRC-IP-ASN,9808,DIRECT
+  - SRC-IP-CIDR,192.168.1.201/32,DIRECT
+  - SRC-IP-SUFFIX,192.168.1.201/8,DIRECT
+  - SRC-PORT,7777,DIRECT
+
+  - IN-PORT,7890,PROXY
+  - IN-TYPE,SOCKS/HTTP,PROXY
+  - IN-USER,mihomo,PROXY
+  - IN-NAME,ss,PROXY
+
+  - RULE-SET,providername,proxy
+
+  - IF-ELSE,direct,final-condition,fake-ip
+
+conditions:
+  - final-condition:
+      - IP-CIDR,127.0.0.0/8
+      - IP-SUFFIX,8.8.8.8/24
+      - IP-ASN,13335
+      - GEOIP,CN

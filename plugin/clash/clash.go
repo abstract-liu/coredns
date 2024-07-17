@@ -1,28 +1,41 @@
 package clash
 
+import "C"
 import (
 	"context"
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/tunnel"
 	"github.com/miekg/dns"
 )
 
 func NewClash(cfg *PluginConfig) (*Clash, error) {
-	c := &Clash{}
+	c := &Clash{
+		config: cfg,
+		tunnel: &tunnel.GlobalTunnel,
+	}
 	return c, nil
 }
 
 type Clash struct {
-	proxies []*Proxy
+	tunnel *tunnel.Tunnel
+	config *PluginConfig
 
 	Next plugin.Handler
 }
 
 func (clash *Clash) Name() string {
-	return _pluginName
+	return constant.PluginName
 }
 
 func (clash *Clash) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	return plugin.NextOrFailure(_pluginName, clash.Next, ctx, w, r)
+	response, err := clash.tunnel.Handle(ctx, r)
+	if err != nil {
+		return plugin.NextOrFailure(constant.PluginName, clash.Next, ctx, w, r)
+	}
+
+	w.WriteMsg(response)
+	return plugin.NextOrFailure(constant.PluginName, clash.Next, ctx, w, r)
 }
 
 // OnStartup starts a goroutines for all proxies.

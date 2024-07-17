@@ -1,17 +1,23 @@
 package adapter
 
 import (
+	"context"
 	"fmt"
 	"github.com/coredns/coredns/plugin/clash/adapter/outbound"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/common/structure"
+	clog "github.com/coredns/coredns/plugin/pkg/log"
+	"github.com/miekg/dns"
 	"strings"
 )
 
 type Nameserver interface {
 	Name() string
 	Type() constant.NameserverType
+	Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error)
 }
+
+var log = clog.NewWithPlugin(constant.PluginName)
 
 func ParseNameserver(mapping map[string]any) (Nameserver, error) {
 	decoder := structure.NewDecoder(structure.Option{TagName: "ns", WeaklyTypedInput: true, KeyReplacer: structure.DefaultKeyReplacer})
@@ -39,7 +45,13 @@ func ParseNameserver(mapping map[string]any) (Nameserver, error) {
 			break
 		}
 		ns, err = outbound.NewUdpNs(*udpOption)
-	case "tcp":
+	case "tls":
+		tlsOption := &outbound.TlsOption{}
+		err = decoder.Decode(mapping, tlsOption)
+		if err != nil {
+			break
+		}
+		ns, err = outbound.NewTlsNs(*tlsOption)
 	default:
 		return nil, fmt.Errorf("unsupport nameserver type: %s", nsType)
 	}

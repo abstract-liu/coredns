@@ -4,6 +4,7 @@ import (
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/config"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"os"
@@ -11,9 +12,7 @@ import (
 	"time"
 )
 
-const _pluginName = "clash"
-
-var log = clog.NewWithPlugin(_pluginName)
+var log = clog.NewWithPlugin(constant.PluginName)
 
 type PluginConfig struct {
 	path string
@@ -24,12 +23,12 @@ type PluginConfig struct {
 	clashConfig *config.ClashConfig
 }
 
-func init() { plugin.Register(_pluginName, setup) }
+func init() { plugin.Register(constant.PluginName, setup) }
 
 func setup(c *caddy.Controller) error {
 	clash, err := parseClash(c)
 	if err != nil {
-		return plugin.Error(_pluginName, err)
+		return plugin.Error(constant.PluginName, err)
 	}
 
 	c.OnStartup(func() error {

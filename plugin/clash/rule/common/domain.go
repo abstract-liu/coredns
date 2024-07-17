@@ -1,6 +1,9 @@
 package common
 
-import "github.com/coredns/coredns/plugin/clash/common/constant"
+import (
+	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/miekg/dns"
+)
 
 type Domain struct {
 	*Base
@@ -14,6 +17,10 @@ func (d *Domain) RuleType() constant.RuleType {
 
 func (d *Domain) Adapter() string {
 	return d.adapter
+}
+
+func (d *Domain) Match(msg *dns.Msg) (bool, string) {
+	return msg.Question[0] == d.domain, d.adapter
 }
 
 func NewDomain(domain string, adapter string) *Domain {
