@@ -1,9 +1,9 @@
 package common
 
 import (
+	"github.com/coredns/coredns/plugin/clash/common"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/miekg/dns"
-	"strings"
 )
 
 type Domain struct {
@@ -25,15 +25,9 @@ func (d *Domain) Match(msg *dns.Msg) (bool, string) {
 }
 
 func NewDomain(domain string, adapter string) *Domain {
-	var domainWithRoot string
-	if strings.HasSuffix(domain, ".") {
-		domainWithRoot = domain
-	} else {
-		domainWithRoot = domain + "."
-	}
 	return &Domain{
 		Base:    &Base{},
-		domain:  domainWithRoot,
+		domain:  common.RenameToRootDomain(domain),
 		adapter: adapter,
 	}
 }

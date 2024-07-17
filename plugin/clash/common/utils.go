@@ -8,3 +8,11 @@ func TrimArr(arr []string) (r []string) {
 	}
 	return
 }
+
+func RenameToRootDomain(domain string) string {
+	if strings.HasSuffix(domain, ".") {
+		return domain
+	} else {
+		return domain + "."
+	}
+}

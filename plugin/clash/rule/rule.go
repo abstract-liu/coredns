@@ -16,6 +16,8 @@ func ParseRule(ruleType, payload, target string, params []string) (rule Rule, er
 	switch ruleType {
 	case "DOMAIN":
 		rule = common.NewDomain(payload, target)
+	case "DOMAIN-SUFFIX":
+		rule = common.NewDomainSuffix(payload, target)
 	default:
 		// TODO: ignore now
 		return nil, nil
