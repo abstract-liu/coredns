@@ -21,7 +21,7 @@ nameserver-groups:
       - cloudflare
 
 rules:
-  - TYPE,q65,REJECT
+  - TYPE,HTTPS,REJECT
 
   - DOMAIN,ad.com,REJECT
   - DOMAIN-SUFFIX,google.com,aliyun-1

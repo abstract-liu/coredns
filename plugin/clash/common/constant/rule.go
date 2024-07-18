@@ -10,6 +10,8 @@ func (rt RuleType) String() string {
 		return "DOMAIN_SUFFIX"
 	case FINAL:
 		return "FINAL"
+	case TYPE:
+		return "TYPE"
 	default:
 		return "UNKNOWN"
 	}
@@ -19,4 +21,5 @@ const (
 	DOMAIN RuleType = iota
 	DOMAIN_SUFFIX
 	FINAL
+	TYPE
 )

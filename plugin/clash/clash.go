@@ -40,8 +40,15 @@ func (clash *Clash) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 		return plugin.NextOrFailure(constant.PluginName, clash.Next, ctx, w, r)
 	}
 
-	w.WriteMsg(response)
-	return plugin.NextOrFailure(constant.PluginName, clash.Next, ctx, w, r)
+	if response != nil {
+		err = w.WriteMsg(response)
+	}
+
+	if clash.Next != nil {
+		return plugin.NextOrFailure(constant.PluginName, clash.Next, ctx, w, r)
+	}
+
+	return 0, nil
 }
 
 // OnStartup starts a goroutines for all proxies.

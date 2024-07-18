@@ -49,7 +49,8 @@ func UpdateNameservers(newNameservers map[string]adapter.Nameserver) {
 }
 
 func logMatchData(msg *dns.Msg, ns adapter.Nameserver, r rule.Rule) {
-	log.Infof("query: [%s], match rule: [%s], use ns: [%s]", msg.Question[0].Name, r.RuleType().String(), ns.Name())
+	question := msg.Question[0]
+	log.Infof("query: [%s]-[%s], match rule: [%s], use ns: [%s]", question.Name, dns.TypeToString[question.Qtype], r.RuleType().String(), ns.Name())
 }
 
 func resolveDnsMsg(r *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) {
@@ -78,14 +79,14 @@ func match(msg *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) {
 		return nameservers["DIRECT"], nil, nil
 	}
 
-	for _, rule := range rules {
-		if matched, ada := rule.Match(msg); matched {
+	for _, r := range rules {
+		if matched, ada := r.Match(msg); matched {
 			adapter, ok := nameservers[ada]
 			if !ok {
 				continue
 			}
 
-			return adapter, rule, nil
+			return adapter, r, nil
 		}
 	}
 

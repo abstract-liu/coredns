@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"github.com/coredns/coredns/plugin/clash/adapter"
+	"github.com/coredns/coredns/plugin/clash/adapter/outbound"
 	"github.com/coredns/coredns/plugin/clash/common"
 	R "github.com/coredns/coredns/plugin/clash/rule"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
@@ -84,6 +85,7 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 
 func parseNameservers(cfg *RawClashConfig) (nameservers map[string]adapter.Nameserver, err error) {
 	nameservers = make(map[string]adapter.Nameserver)
+	nameservers["REJECT"] = outbound.NewRejectNs()
 
 	// parse Nameservers
 	for idx, mapping := range cfg.Nameservers {
@@ -148,7 +150,7 @@ func parseRules(rulesConfig []string, nameservers map[string]adapter.Nameserver)
 			continue
 		}
 		if parseErr != nil {
-			return nil, fmt.Errorf("Rule[%d] [%s] error: %s", idx, line, parseErr.Error())
+			return nil, fmt.Errorf("rule[%d] [%s] error: %s", idx, line, parseErr.Error())
 		}
 
 		rules = append(rules, parsed)

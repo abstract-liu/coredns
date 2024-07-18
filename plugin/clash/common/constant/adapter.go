@@ -4,6 +4,7 @@ const (
 	Udp NameserverType = iota
 	Tcp
 	Tls
+	Reject
 )
 
 type NameserverType int
@@ -16,6 +17,8 @@ func (ns NameserverType) String() string {
 		return "Tcp"
 	case Tls:
 		return "Tls"
+	case Reject:
+		return "Reject"
 	default:
 		return "Unknown"
 	}

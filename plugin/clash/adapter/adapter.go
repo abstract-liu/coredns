@@ -52,6 +52,13 @@ func ParseNameserver(mapping map[string]any) (Nameserver, error) {
 			break
 		}
 		ns, err = outbound.NewTlsNs(*tlsOption)
+	case "reject":
+		rejectOption := &outbound.RejectOption{}
+		err = decoder.Decode(mapping, rejectOption)
+		if err != nil {
+			break
+		}
+		ns = outbound.NewRejectNsWithOption(*rejectOption)
 	default:
 		return nil, fmt.Errorf("unsupport nameserver type: %s", nsType)
 	}
