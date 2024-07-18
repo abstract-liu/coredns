@@ -21,6 +21,11 @@ func generalTest(ns constant.Nameserver, t *testing.T) {
 	assert.NotZero(t, rmsg.Answer)
 	record := rmsg.Answer[0].(*dns.A)
 	assert.Equal(t, record.A.String(), "1.1.1.1")
+
+	rmsg, err = exchange(ns, "www.baidu.com", dns.TypeA)
+	assert.NoError(t, err)
+	assert.NotEmptyf(t, rmsg, "response emty")
+	assert.NotZero(t, rmsg.Answer)
 }
 
 func TestUDPNS(t *testing.T) {
