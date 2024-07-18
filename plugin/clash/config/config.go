@@ -75,7 +75,7 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 	}
 	cfg.Nameservers = nameservers
 
-	rules, err := parseRules(rawCfg.Rules, nameservers)
+	rules, err := parseRules(rawCfg.Rules)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func parseNameservers(cfg *RawClashConfig) (nameservers map[string]constant.Name
 	return nameservers, nil
 }
 
-func parseRules(rulesConfig []string, nameservers map[string]constant.Nameserver) ([]constant.Rule, error) {
+func parseRules(rulesConfig []string) ([]constant.Rule, error) {
 	var rules []constant.Rule
 
 	// parse Rules

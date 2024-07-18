@@ -1,4 +1,4 @@
-package common
+package single
 
 type Base struct {
 }

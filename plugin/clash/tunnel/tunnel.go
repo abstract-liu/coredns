@@ -3,6 +3,8 @@ package tunnel
 import (
 	"context"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/ns/outboundgroup"
+	"github.com/coredns/coredns/plugin/clash/rule/logic"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/miekg/dns"
 	"sync"
@@ -30,6 +32,18 @@ func (t *Tunnel) Handle(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
 	}
 	logMatchData(msg, ns, r)
 
+	if r.RuleType() == constant.FALLBACK {
+		fallbackRule := r.(*logic.Fallback)
+		fallbackNS := ns.(*outboundgroup.Fallback)
+		// TODO: reformat to channel style
+		defaultAnswer, err := fallbackNS.DefaultQuery(ctx, msg)
+		if err == nil {
+			if !fallbackRule.ShouldFallback(defaultAnswer) {
+				return defaultAnswer, nil
+			}
+		}
+		return fallbackNS.FallbackQuery(ctx, msg)
+	}
 	return ns.Query(ctx, msg)
 }
 

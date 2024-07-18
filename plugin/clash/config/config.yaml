@@ -40,7 +40,7 @@ rules:
 
   - RULE-SET,providername,proxy
 
-  # - FALLBACK,cn-filter,aliyun-1,fake-ip
+  # - FALLBACK,cn-filter,fallback
   - FINAL,round-robin
 
 filters:

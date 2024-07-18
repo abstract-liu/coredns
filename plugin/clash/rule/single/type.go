@@ -1,4 +1,4 @@
-package common
+package single
 
 import (
 	"github.com/coredns/coredns/plugin/clash/common/constant"

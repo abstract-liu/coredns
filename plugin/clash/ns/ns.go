@@ -61,7 +61,7 @@ func ParseNameserver(mapping map[string]any) (constant.Nameserver, error) {
 		return nil, fmt.Errorf("unsupport nameserver type: %s", nsType)
 	}
 
-	return ns, nil
+	return ns, err
 }
 
 func ParseNSGroup(config map[string]any, nameservers map[string]constant.Nameserver) (constant.Nameserver, error) {
@@ -92,6 +92,12 @@ func ParseNSGroup(config map[string]any, nameservers map[string]constant.Nameser
 	switch groupOption.Type {
 	case "select":
 	case "fallback":
+		fallbackOpt := &outboundgroup.FallbackOption{}
+		err = decoder.Decode(config, fallbackOpt)
+		if err != nil {
+			break
+		}
+		group, err = outboundgroup.NewFallback(fallbackOpt, nameservers)
 	case "load-balance":
 	case "random":
 	case "round-robin":
@@ -105,7 +111,7 @@ func ParseNSGroup(config map[string]any, nameservers map[string]constant.Nameser
 		return nil, fmt.Errorf("%w: %s", errType, groupOption.Type)
 	}
 
-	return group, nil
+	return group, err
 }
 
 func getNameservers(mapping map[string]constant.Nameserver, list []string) ([]constant.Nameserver, error) {

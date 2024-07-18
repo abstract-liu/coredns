@@ -1,5 +1,7 @@
 package constant
 
+import "net/netip"
+
 type FilterType int
 
 func (ct FilterType) String() string {
@@ -20,3 +22,8 @@ const (
 	IP_ASN
 	GEOIP
 )
+
+type Filter interface {
+	FilterType() FilterType
+	Match(addr netip.Addr) bool
+}

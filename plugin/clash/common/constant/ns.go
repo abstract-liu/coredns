@@ -13,6 +13,7 @@ const (
 
 	RANDOM
 	ROUND_ROBIN
+	FALLBACK_NS
 )
 
 type Nameserver interface {
@@ -35,6 +36,8 @@ func (ns NameserverType) String() string {
 		return "REJECT"
 	case ROUND_ROBIN:
 		return "ROUND_ROBIN"
+	case FALLBACK_NS:
+		return "FALLBACK"
 	default:
 		return "Unknown"
 	}

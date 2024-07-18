@@ -1,6 +1,9 @@
 package common
 
 import (
+	"github.com/miekg/dns"
+	"net"
+	"net/netip"
 	"strconv"
 	"strings"
 )
@@ -20,4 +23,33 @@ func CanonicalAddr(addr string, port int) string {
 	} else {
 		return addrWithoutProto + ":" + strconv.Itoa(port)
 	}
+}
+
+func IpToAddr(slice net.IP) netip.Addr {
+	ip := slice
+	if len(ip) != 4 {
+		if ip = slice.To4(); ip == nil {
+			ip = slice
+		}
+	}
+
+	if addr, ok := netip.AddrFromSlice(ip); ok {
+		return addr
+	}
+	return netip.Addr{}
+}
+
+func MsgToIP(msg *dns.Msg) []netip.Addr {
+	ips := []netip.Addr{}
+
+	for _, answer := range msg.Answer {
+		switch ans := answer.(type) {
+		case *dns.AAAA:
+			ips = append(ips, IpToAddr(ans.AAAA))
+		case *dns.A:
+			ips = append(ips, IpToAddr(ans.A))
+		}
+	}
+
+	return ips
 }
