@@ -1,14 +1,14 @@
 package common
 
 import (
-	"github.com/coredns/coredns/plugin/clash/common"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/rule"
 	"github.com/miekg/dns"
 	"strings"
 )
 
 type DomainSuffix struct {
-	*Base
+	*rule.Base
 	suffix  string
 	adapter string
 }
@@ -28,8 +28,8 @@ func (d *DomainSuffix) Match(msg *dns.Msg) (bool, string) {
 
 func NewDomainSuffix(suffix string, adapter string) *DomainSuffix {
 	return &DomainSuffix{
-		Base:    &Base{},
-		suffix:  common.RenameToRootDomain(suffix),
+		Base:    &rule.Base{},
+		suffix:  dns.Fqdn(suffix),
 		adapter: adapter,
 	}
 }

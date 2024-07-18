@@ -27,7 +27,7 @@ type Tunnel struct {
 var GlobalTunnel Tunnel
 
 func (t *Tunnel) Handle(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
-	ns, r, err := resolveDnsMsg(msg)
+	ns, r, err := matchRuleNs(msg)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func logMatchData(msg *dns.Msg, ns adapter.Nameserver, r rule.Rule) {
 	log.Infof("query: [%s]-[%s], match rule: [%s], use ns: [%s]", question.Name, dns.TypeToString[question.Qtype], r.RuleType().String(), ns.Name())
 }
 
-func resolveDnsMsg(r *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) {
+func matchRuleNs(r *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) {
 	switch mode {
 	case constant.Direct:
 	case constant.Global:

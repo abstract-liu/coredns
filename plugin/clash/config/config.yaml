@@ -1,24 +1,28 @@
 nameservers:
-  - name: "aliyun-1"
-    address: "udp://223.5.5.5:53"
-  - name: "aliyun-2"
-    address: "udp://223.6.6.6:53"
-  - name: "cloudflare"
-    address: "tls://1.1.1.1"
-    tls_servername: "1dot1dot1dot1.cloudflare-dns.com"
-  - name: "fake-ip"
-    address: "udp://192.168.2.4"
+  - name: aliyun-1
+    address: udp://223.5.5.5
+  - name: aliyun-2
+    address: udp://223.6.6.6
+  - name: cloudflare
+    address: tls://1.1.1.1
+    tls_servername: 1dot1dot1dot1.cloudflare-dns.com
+  - name: tpgw
+    address: udp://192.168.2.4
 
 nameserver-groups:
-  - name: "direct"
+  - name: direct
     type: balance
     nameservers:
       - aliyun-1
       - aliyun-2
-  - name: "true"
+  - name: reliable
     type: fast
     nameservers:
       - cloudflare
+  - name: fallback
+    type: fallback
+    default-nameserver: direct
+    fallback-nameserver: reliable
 
 rules:
   - TYPE,HTTPS,REJECT
@@ -40,11 +44,11 @@ rules:
 
   - RULE-SET,providername,proxy
 
-  - IF-ELSE,aliyun-1,final-condition,fake-ip
+  - FALLBACK,cn-filter,aliyun-1,fake-ip
   - FINAL,aliyun-1
 
-conditions:
-  - final-condition:
+filters:
+  - cn-filter:
       - IP-CIDR,127.0.0.0/8
       - IP-SUFFIX,8.8.8.8/24
       - IP-ASN,13335

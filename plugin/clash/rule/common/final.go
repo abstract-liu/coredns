@@ -2,11 +2,12 @@ package common
 
 import (
 	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/rule"
 	"github.com/miekg/dns"
 )
 
 type Final struct {
-	*Base
+	*rule.Base
 	adapter string
 }
 
@@ -24,7 +25,7 @@ func (f *Final) Adapter() string {
 
 func NewFinal(adapter string) *Final {
 	return &Final{
-		Base:    &Base{},
+		Base:    &rule.Base{},
 		adapter: adapter,
 	}
 }

@@ -2,11 +2,12 @@ package common
 
 import (
 	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/rule"
 	"github.com/miekg/dns"
 )
 
 type Type struct {
-	*Base
+	*rule.Base
 	tp      uint16
 	adapter string
 }
@@ -30,7 +31,7 @@ func NewType(tpStr string, adapter string) *Type {
 	}
 
 	return &Type{
-		Base:    &Base{},
+		Base:    &rule.Base{},
 		tp:      tp,
 		adapter: adapter,
 	}

@@ -1,4 +1,4 @@
-package common
+package rule
 
 type Base struct {
 }

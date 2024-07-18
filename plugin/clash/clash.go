@@ -35,6 +35,11 @@ func (clash *Clash) Name() string {
 }
 
 func (clash *Clash) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	if len(r.Question) == 0 {
+		log.Error("No question in the request")
+		return plugin.NextOrFailure(constant.PluginName, clash.Next, ctx, w, r)
+	}
+
 	response, err := clash.tunnel.Handle(ctx, r)
 	if err != nil {
 		return plugin.NextOrFailure(constant.PluginName, clash.Next, ctx, w, r)
