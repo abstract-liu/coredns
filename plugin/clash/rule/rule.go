@@ -8,7 +8,7 @@ import (
 
 type Rule interface {
 	RuleType() constant.RuleType
-	Adapter() string
+	NS() string
 	Match(msg *dns.Msg) (bool, string)
 }
 

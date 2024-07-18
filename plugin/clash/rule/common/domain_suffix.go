@@ -9,27 +9,27 @@ import (
 
 type DomainSuffix struct {
 	*rule.Base
-	suffix  string
-	adapter string
+	suffix string
+	ns     string
 }
 
 func (d *DomainSuffix) RuleType() constant.RuleType {
 	return constant.DOMAIN
 }
 
-func (d *DomainSuffix) Adapter() string {
-	return d.adapter
+func (d *DomainSuffix) NS() string {
+	return d.ns
 }
 
 func (d *DomainSuffix) Match(msg *dns.Msg) (bool, string) {
 	domain := msg.Question[0].Name
-	return strings.HasSuffix(domain, "."+d.suffix) || domain == d.suffix, d.adapter
+	return strings.HasSuffix(domain, "."+d.suffix) || domain == d.suffix, d.ns
 }
 
-func NewDomainSuffix(suffix string, adapter string) *DomainSuffix {
+func NewDomainSuffix(suffix string, ns string) *DomainSuffix {
 	return &DomainSuffix{
-		Base:    &rule.Base{},
-		suffix:  dns.Fqdn(suffix),
-		adapter: adapter,
+		Base:   &rule.Base{},
+		suffix: dns.Fqdn(suffix),
+		ns:     ns,
 	}
 }

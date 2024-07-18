@@ -11,7 +11,7 @@ type TlsNs struct {
 }
 
 type TlsOption struct {
-	BasicOption
+	BaseOption
 }
 
 func (ns *TlsNs) Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {

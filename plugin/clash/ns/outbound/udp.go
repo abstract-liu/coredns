@@ -14,7 +14,7 @@ type UdpNs struct {
 }
 
 type UdpOption struct {
-	BasicOption
+	BaseOption
 }
 
 func (ns *UdpNs) Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {

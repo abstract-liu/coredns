@@ -5,6 +5,8 @@ const (
 	Tcp
 	Tls
 	Reject
+
+	Random
 )
 
 type NameserverType int

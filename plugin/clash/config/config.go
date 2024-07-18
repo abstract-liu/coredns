@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
-	"github.com/coredns/coredns/plugin/clash/adapter"
-	"github.com/coredns/coredns/plugin/clash/adapter/outbound"
 	"github.com/coredns/coredns/plugin/clash/common"
+	"github.com/coredns/coredns/plugin/clash/ns"
+	"github.com/coredns/coredns/plugin/clash/ns/outbound"
+	"github.com/coredns/coredns/plugin/clash/ns/outboundgroup"
 	R "github.com/coredns/coredns/plugin/clash/rule"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"gopkg.in/yaml.v3"
@@ -27,7 +28,7 @@ var _defaultRawConfig = RawClashConfig{
 }
 
 type ClashConfig struct {
-	Nameservers map[string]adapter.Nameserver
+	Nameservers map[string]ns.Nameserver
 	Rules       []R.Rule
 }
 
@@ -83,13 +84,13 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 	return cfg, nil
 }
 
-func parseNameservers(cfg *RawClashConfig) (nameservers map[string]adapter.Nameserver, err error) {
-	nameservers = make(map[string]adapter.Nameserver)
+func parseNameservers(cfg *RawClashConfig) (nameservers map[string]ns.Nameserver, err error) {
+	nameservers = make(map[string]ns.Nameserver)
 	nameservers["REJECT"] = outbound.NewRejectNs()
 
 	// parse Nameservers
 	for idx, mapping := range cfg.Nameservers {
-		ns, err := adapter.ParseNameserver(mapping)
+		ns, err := ns.ParseNameserver(mapping)
 		if err != nil {
 			return nil, fmt.Errorf("nameserver %d: %w", idx, err)
 		}
@@ -102,17 +103,23 @@ func parseNameservers(cfg *RawClashConfig) (nameservers map[string]adapter.Names
 
 	// parse nameserver groups
 	for idx, mapping := range cfg.NameserverGroups {
-		groupName, existName := mapping["name"].(string)
-		if !existName {
-			return nil, fmt.Errorf("ns group %d: missing name", idx)
+		group, err := outboundgroup.ParseProxyGroup(mapping, nameservers)
+		if err != nil {
+			return nil, fmt.Errorf("proxy group[%d]: %w", idx, err)
 		}
-		log.Debug("group name: ", groupName)
+
+		groupName := group.Name()
+		if _, exist := nameservers[groupName]; exist {
+			return nil, fmt.Errorf("proxy group %s: the duplicate name", groupName)
+		}
+
+		nameservers[groupName] = group
 	}
 
 	return nameservers, nil
 }
 
-func parseRules(rulesConfig []string, nameservers map[string]adapter.Nameserver) ([]R.Rule, error) {
+func parseRules(rulesConfig []string, nameservers map[string]ns.Nameserver) ([]R.Rule, error) {
 	var rules []R.Rule
 
 	// parse Rules

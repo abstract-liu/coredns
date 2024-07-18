@@ -1,10 +1,9 @@
 package tunnel
 
-import "C"
 import (
 	"context"
-	"github.com/coredns/coredns/plugin/clash/adapter"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/ns"
 	"github.com/coredns/coredns/plugin/clash/rule"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/miekg/dns"
@@ -16,7 +15,7 @@ var (
 	configMux sync.RWMutex
 
 	rules       []rule.Rule
-	nameservers = make(map[string]adapter.Nameserver)
+	nameservers = make(map[string]ns.Nameserver)
 
 	log = clog.NewWithPlugin(constant.PluginName)
 )
@@ -42,18 +41,18 @@ func UpdateRules(newRules []rule.Rule) {
 	configMux.Unlock()
 }
 
-func UpdateNameservers(newNameservers map[string]adapter.Nameserver) {
+func UpdateNameservers(newNameservers map[string]ns.Nameserver) {
 	configMux.Lock()
 	nameservers = newNameservers
 	configMux.Unlock()
 }
 
-func logMatchData(msg *dns.Msg, ns adapter.Nameserver, r rule.Rule) {
+func logMatchData(msg *dns.Msg, ns ns.Nameserver, r rule.Rule) {
 	question := msg.Question[0]
 	log.Infof("query: [%s]-[%s], match rule: [%s], use ns: [%s]", question.Name, dns.TypeToString[question.Qtype], r.RuleType().String(), ns.Name())
 }
 
-func matchRuleNs(r *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) {
+func matchRuleNs(r *dns.Msg) (ns ns.Nameserver, rule rule.Rule, err error) {
 	switch mode {
 	case constant.Direct:
 	case constant.Global:
@@ -64,7 +63,7 @@ func matchRuleNs(r *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) 
 	return
 }
 
-func match(msg *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) {
+func match(msg *dns.Msg) (ns.Nameserver, rule.Rule, error) {
 	configMux.RLock()
 	defer configMux.RUnlock()
 	/*
@@ -81,12 +80,12 @@ func match(msg *dns.Msg) (ns adapter.Nameserver, rule rule.Rule, err error) {
 
 	for _, r := range rules {
 		if matched, ada := r.Match(msg); matched {
-			adapter, ok := nameservers[ada]
+			matchNS, ok := nameservers[ada]
 			if !ok {
 				continue
 			}
 
-			return adapter, r, nil
+			return matchNS, r, nil
 		}
 	}
 

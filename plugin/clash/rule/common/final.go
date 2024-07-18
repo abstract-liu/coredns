@@ -8,7 +8,7 @@ import (
 
 type Final struct {
 	*rule.Base
-	adapter string
+	ns string
 }
 
 func (f *Final) RuleType() constant.RuleType {
@@ -16,16 +16,16 @@ func (f *Final) RuleType() constant.RuleType {
 }
 
 func (f *Final) Match(msg *dns.Msg) (bool, string) {
-	return true, f.adapter
+	return true, f.ns
 }
 
-func (f *Final) Adapter() string {
-	return f.adapter
+func (f *Final) NS() string {
+	return f.ns
 }
 
-func NewFinal(adapter string) *Final {
+func NewFinal(ns string) *Final {
 	return &Final{
-		Base:    &rule.Base{},
-		adapter: adapter,
+		Base: &rule.Base{},
+		ns:   ns,
 	}
 }

@@ -13,9 +13,18 @@ type Base struct {
 	nsType constant.NameserverType
 }
 
-type BasicOption struct {
+type BaseOption struct {
 	Name    string `ns:"name"`
 	Address string `ns:"address"`
+	NSType  constant.NameserverType
+}
+
+func NewBase(option *BaseOption) *Base {
+	return &Base{
+		name:   option.Name,
+		addr:   option.Address,
+		nsType: option.NSType,
+	}
 }
 
 func (b *Base) Name() string {

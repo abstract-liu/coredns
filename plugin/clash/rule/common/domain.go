@@ -8,26 +8,26 @@ import (
 
 type Domain struct {
 	*rule.Base
-	domain  string
-	adapter string
+	domain string
+	ns     string
 }
 
 func (d *Domain) RuleType() constant.RuleType {
 	return constant.DOMAIN
 }
 
-func (d *Domain) Adapter() string {
-	return d.adapter
+func (d *Domain) NS() string {
+	return d.ns
 }
 
 func (d *Domain) Match(msg *dns.Msg) (bool, string) {
-	return msg.Question[0].Name == d.domain, d.adapter
+	return msg.Question[0].Name == d.domain, d.ns
 }
 
-func NewDomain(domain string, adapter string) *Domain {
+func NewDomain(domain string, ns string) *Domain {
 	return &Domain{
-		Base:    &rule.Base{},
-		domain:  dns.Fqdn(domain),
-		adapter: adapter,
+		Base:   &rule.Base{},
+		domain: dns.Fqdn(domain),
+		ns:     ns,
 	}
 }

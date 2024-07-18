@@ -11,7 +11,7 @@ type RejectNs struct {
 }
 
 type RejectOption struct {
-	BasicOption
+	BaseOption
 }
 
 func (ns *RejectNs) Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {

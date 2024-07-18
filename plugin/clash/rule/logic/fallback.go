@@ -9,19 +9,19 @@ import (
 
 type Fallback struct {
 	*rule.Base
-	filters         []*filter.Filter
-	fallbackAdapter string
+	filters    []*filter.Filter
+	fallbackNS string
 }
 
 func (i *Fallback) RuleType() constant.RuleType {
 	return constant.FALLBACK
 }
 
-func (i *Fallback) Adapter() string {
-	return i.fallbackAdapter
+func (i *Fallback) NS() string {
+	return i.fallbackNS
 }
 
 func (i *Fallback) Match(msg *dns.Msg) (bool, string) {
-	// cause it's if else, we should always return true
-	return true, i.defaultAdapter
+	// cause it's fallback, we should always return true
+	return true, i.fallbackNS
 }
