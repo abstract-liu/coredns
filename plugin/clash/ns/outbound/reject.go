@@ -27,7 +27,7 @@ func NewRejectNs() *RejectNs {
 		Base: &Base{
 			name:   "REJECT",
 			addr:   "reject://127.0.0.1",
-			nsType: constant.Reject,
+			nsType: constant.REJECT,
 		},
 	}
 }
@@ -37,7 +37,7 @@ func NewRejectNsWithOption(option RejectOption) *RejectNs {
 		Base: &Base{
 			name:   option.Name,
 			addr:   option.Address,
-			nsType: constant.Reject,
+			nsType: constant.REJECT,
 		},
 	}
 }

@@ -23,7 +23,7 @@ func NewTlsNs(option TlsOption) (*TlsNs, error) {
 		Base: &Base{
 			name:   option.Name,
 			addr:   option.Address,
-			nsType: constant.Tls,
+			nsType: constant.TLS,
 		},
 	}, nil
 }

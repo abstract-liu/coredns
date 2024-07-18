@@ -19,6 +19,11 @@ nameserver-groups:
     type: fast
     nameservers:
       - cloudflare
+  - name: round-robin
+    type: round-robin
+    nameservers:
+      - aliyun-1
+      - aliyun-2
   - name: fallback
     type: fallback
     default-nameserver: direct

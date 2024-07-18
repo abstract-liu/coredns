@@ -1,15 +1,12 @@
 package ns
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/common/structure"
 	"github.com/coredns/coredns/plugin/clash/ns/outbound"
 	"github.com/coredns/coredns/plugin/clash/ns/outboundgroup"
-	clog "github.com/coredns/coredns/plugin/pkg/log"
-	"github.com/miekg/dns"
 	"strings"
 )
 
@@ -20,15 +17,7 @@ var (
 	errDuplicateProvider = errors.New("duplicate provider name")
 )
 
-type Nameserver interface {
-	Name() string
-	Type() constant.NameserverType
-	Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error)
-}
-
-var log = clog.NewWithPlugin(constant.PluginName)
-
-func ParseNameserver(mapping map[string]any) (Nameserver, error) {
+func ParseNameserver(mapping map[string]any) (constant.Nameserver, error) {
 	decoder := structure.NewDecoder(structure.Option{TagName: "ns", WeaklyTypedInput: true, KeyReplacer: structure.DefaultKeyReplacer})
 
 	address, existAddr := mapping["address"].(string)
@@ -43,7 +32,7 @@ func ParseNameserver(mapping map[string]any) (Nameserver, error) {
 	nsType := expr[0]
 
 	var (
-		ns  Nameserver
+		ns  constant.Nameserver
 		err error
 	)
 	switch nsType {
@@ -75,7 +64,7 @@ func ParseNameserver(mapping map[string]any) (Nameserver, error) {
 	return ns, nil
 }
 
-func ParseNSGroup(config map[string]any, nameservers map[string]Nameserver) (Nameserver, error) {
+func ParseNSGroup(config map[string]any, nameservers map[string]constant.Nameserver) (constant.Nameserver, error) {
 	decoder := structure.NewDecoder(structure.Option{TagName: "group", WeaklyTypedInput: true})
 
 	groupOption := &outboundgroup.GroupBaseOption{}
@@ -92,13 +81,26 @@ func ParseNSGroup(config map[string]any, nameservers map[string]Nameserver) (Nam
 		return nil, fmt.Errorf("%s: %w", groupName, errMissProxy)
 	}
 
-	var group Nameserver
+	usedNameservers, err := getNameservers(nameservers, groupOption.Nameservers)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", groupName, err)
+	}
+
+	var (
+		group constant.Nameserver
+	)
 	switch groupOption.Type {
 	case "select":
 	case "fallback":
 	case "load-balance":
 	case "random":
-		group = outboundgroup.NewRandom(groupOption)
+	case "round-robin":
+		roundRobinOpt := &outboundgroup.RoundRobinOption{}
+		err = decoder.Decode(config, roundRobinOpt)
+		if err != nil {
+			break
+		}
+		group = outboundgroup.NewRoundRobin(roundRobinOpt, usedNameservers)
 	default:
 		return nil, fmt.Errorf("%w: %s", errType, groupOption.Type)
 	}
@@ -106,8 +108,8 @@ func ParseNSGroup(config map[string]any, nameservers map[string]Nameserver) (Nam
 	return group, nil
 }
 
-func getNameservers(mapping map[string]Nameserver, list []string) ([]Nameserver, error) {
-	var nameservers []Nameserver
+func getNameservers(mapping map[string]constant.Nameserver, list []string) ([]constant.Nameserver, error) {
+	var nameservers []constant.Nameserver
 	for _, name := range list {
 		ns, ok := mapping[name]
 		if !ok {
