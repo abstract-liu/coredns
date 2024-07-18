@@ -3,12 +3,12 @@ package logic
 import (
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/filter"
-	"github.com/coredns/coredns/plugin/clash/rule"
+	"github.com/coredns/coredns/plugin/clash/rule/common"
 	"github.com/miekg/dns"
 )
 
 type Fallback struct {
-	*rule.Base
+	*common.Base
 	filters    []*filter.Filter
 	fallbackNS string
 }

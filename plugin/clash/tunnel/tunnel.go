@@ -3,19 +3,17 @@ package tunnel
 import (
 	"context"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
-	"github.com/coredns/coredns/plugin/clash/ns"
-	"github.com/coredns/coredns/plugin/clash/rule"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/miekg/dns"
 	"sync"
 )
 
 var (
-	mode      = constant.Rule
+	mode      = constant.RULE
 	configMux sync.RWMutex
 
-	rules       []rule.Rule
-	nameservers = make(map[string]ns.Nameserver)
+	rules       []constant.Rule
+	nameservers = make(map[string]constant.Nameserver)
 
 	log = clog.NewWithPlugin(constant.PluginName)
 )
@@ -35,27 +33,27 @@ func (t *Tunnel) Handle(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
 	return ns.Query(ctx, msg)
 }
 
-func UpdateRules(newRules []rule.Rule) {
+func UpdateRules(newRules []constant.Rule) {
 	configMux.Lock()
 	rules = newRules
 	configMux.Unlock()
 }
 
-func UpdateNameservers(newNameservers map[string]ns.Nameserver) {
+func UpdateNameservers(newNameservers map[string]constant.Nameserver) {
 	configMux.Lock()
 	nameservers = newNameservers
 	configMux.Unlock()
 }
 
-func logMatchData(msg *dns.Msg, ns ns.Nameserver, r rule.Rule) {
+func logMatchData(msg *dns.Msg, ns constant.Nameserver, r constant.Rule) {
 	question := msg.Question[0]
 	log.Infof("query: [%s]-[%s], match rule: [%s], use ns: [%s]", question.Name, dns.TypeToString[question.Qtype], r.RuleType().String(), ns.Name())
 }
 
-func matchRuleNs(r *dns.Msg) (ns ns.Nameserver, rule rule.Rule, err error) {
+func matchRuleNs(r *dns.Msg) (ns constant.Nameserver, rule constant.Rule, err error) {
 	switch mode {
-	case constant.Direct:
-	case constant.Global:
+	case constant.DIRECT:
+	case constant.GLOBAL:
 		log.Debug("mode not supported now")
 	default:
 		ns, rule, err = match(r)
@@ -63,7 +61,7 @@ func matchRuleNs(r *dns.Msg) (ns ns.Nameserver, rule rule.Rule, err error) {
 	return
 }
 
-func match(msg *dns.Msg) (ns.Nameserver, rule.Rule, error) {
+func match(msg *dns.Msg) (constant.Nameserver, constant.Rule, error) {
 	configMux.RLock()
 	defer configMux.RUnlock()
 	/*

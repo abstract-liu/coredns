@@ -3,16 +3,9 @@ package rule
 import (
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/rule/common"
-	"github.com/miekg/dns"
 )
 
-type Rule interface {
-	RuleType() constant.RuleType
-	NS() string
-	Match(msg *dns.Msg) (bool, string)
-}
-
-func ParseRule(ruleType, payload, target string, params []string) (rule Rule, err error) {
+func ParseRule(ruleType, payload, target string, params []string) (rule constant.Rule, err error) {
 	switch ruleType {
 	case "DOMAIN":
 		rule = common.NewDomain(payload, target)

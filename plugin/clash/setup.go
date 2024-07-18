@@ -125,5 +125,5 @@ func readClashConfig(pluginConfig *PluginConfig) error {
 	}
 	pluginConfig.clashConfig, err = config.Parse(data)
 
-	return nil
+	return err
 }

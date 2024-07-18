@@ -10,24 +10,15 @@ nameservers:
     address: udp://192.168.2.4
 
 nameserver-groups:
-  - name: direct
-    type: balance
-    nameservers:
-      - aliyun-1
-      - aliyun-2
-  - name: reliable
-    type: fast
-    nameservers:
-      - cloudflare
   - name: round-robin
     type: round-robin
     nameservers:
       - aliyun-1
       - aliyun-2
-  - name: fallback
-    type: fallback
-    default-nameserver: direct
-    fallback-nameserver: reliable
+  #- name: fallback
+  #  type: fallback
+  #  default-nameserver: direct
+  #  fallback-nameserver: reliable
 
 rules:
   - TYPE,HTTPS,REJECT
@@ -49,8 +40,8 @@ rules:
 
   - RULE-SET,providername,proxy
 
-  - FALLBACK,cn-filter,aliyun-1,fake-ip
-  - FINAL,aliyun-1
+  # - FALLBACK,cn-filter,aliyun-1,fake-ip
+  - FINAL,round-robin
 
 filters:
   - cn-filter:

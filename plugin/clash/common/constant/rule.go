@@ -1,5 +1,7 @@
 package constant
 
+import "github.com/miekg/dns"
+
 type RuleType int
 
 func (rt RuleType) String() string {
@@ -26,3 +28,9 @@ const (
 	TYPE
 	FALLBACK
 )
+
+type Rule interface {
+	RuleType() RuleType
+	NS() string
+	Match(msg *dns.Msg) (bool, string)
+}

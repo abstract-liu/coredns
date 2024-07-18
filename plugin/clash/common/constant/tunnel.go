@@ -3,7 +3,7 @@ package constant
 type TunnelMode int
 
 const (
-	Global TunnelMode = iota
-	Rule
-	Direct
+	GLOBAL TunnelMode = iota
+	DIRECT
+	RULE
 )

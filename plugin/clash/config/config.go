@@ -3,9 +3,9 @@ package config
 import (
 	"fmt"
 	"github.com/coredns/coredns/plugin/clash/common"
+	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/ns"
 	"github.com/coredns/coredns/plugin/clash/ns/outbound"
-	"github.com/coredns/coredns/plugin/clash/ns/outboundgroup"
 	R "github.com/coredns/coredns/plugin/clash/rule"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"gopkg.in/yaml.v3"
@@ -28,8 +28,8 @@ var _defaultRawConfig = RawClashConfig{
 }
 
 type ClashConfig struct {
-	Nameservers map[string]ns.Nameserver
-	Rules       []R.Rule
+	Nameservers map[string]constant.Nameserver
+	Rules       []constant.Rule
 }
 
 type RawClashConfig struct {
@@ -84,8 +84,8 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 	return cfg, nil
 }
 
-func parseNameservers(cfg *RawClashConfig) (nameservers map[string]ns.Nameserver, err error) {
-	nameservers = make(map[string]ns.Nameserver)
+func parseNameservers(cfg *RawClashConfig) (nameservers map[string]constant.Nameserver, err error) {
+	nameservers = make(map[string]constant.Nameserver)
 	nameservers["REJECT"] = outbound.NewRejectNs()
 
 	// parse Nameservers
@@ -103,14 +103,14 @@ func parseNameservers(cfg *RawClashConfig) (nameservers map[string]ns.Nameserver
 
 	// parse nameserver groups
 	for idx, mapping := range cfg.NameserverGroups {
-		group, err := outboundgroup.ParseProxyGroup(mapping, nameservers)
+		group, err := ns.ParseNSGroup(mapping, nameservers)
 		if err != nil {
-			return nil, fmt.Errorf("proxy group[%d]: %w", idx, err)
+			return nil, fmt.Errorf("nsgroup[%d]: %w", idx, err)
 		}
 
 		groupName := group.Name()
 		if _, exist := nameservers[groupName]; exist {
-			return nil, fmt.Errorf("proxy group %s: the duplicate name", groupName)
+			return nil, fmt.Errorf("nsgroup %s: the duplicate name", groupName)
 		}
 
 		nameservers[groupName] = group
@@ -119,8 +119,8 @@ func parseNameservers(cfg *RawClashConfig) (nameservers map[string]ns.Nameserver
 	return nameservers, nil
 }
 
-func parseRules(rulesConfig []string, nameservers map[string]ns.Nameserver) ([]R.Rule, error) {
-	var rules []R.Rule
+func parseRules(rulesConfig []string, nameservers map[string]constant.Nameserver) ([]constant.Rule, error) {
+	var rules []constant.Rule
 
 	// parse Rules
 	// rule in format: ruleType(aka:ruleName), payload, target, params...

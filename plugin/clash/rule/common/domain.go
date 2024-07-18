@@ -2,12 +2,11 @@ package common
 
 import (
 	"github.com/coredns/coredns/plugin/clash/common/constant"
-	"github.com/coredns/coredns/plugin/clash/rule"
 	"github.com/miekg/dns"
 )
 
 type Domain struct {
-	*rule.Base
+	*Base
 	domain string
 	ns     string
 }
@@ -26,7 +25,7 @@ func (d *Domain) Match(msg *dns.Msg) (bool, string) {
 
 func NewDomain(domain string, ns string) *Domain {
 	return &Domain{
-		Base:   &rule.Base{},
+		Base:   &Base{},
 		domain: dns.Fqdn(domain),
 		ns:     ns,
 	}
