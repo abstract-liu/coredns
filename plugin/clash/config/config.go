@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/coredns/coredns/plugin/clash/common"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/filter"
 	"github.com/coredns/coredns/plugin/clash/ns"
 	"github.com/coredns/coredns/plugin/clash/ns/outbound"
 	R "github.com/coredns/coredns/plugin/clash/rule"
@@ -18,6 +19,7 @@ var _defaultRawConfig = RawClashConfig{
 	Nameservers:      []map[string]any{},
 	NameserverGroups: []map[string]any{},
 	Rules:            []string{},
+	Filters:          []map[string][]string{},
 
 	GeoXUrl: GeoXUrl{
 		Mmdb:    "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb",
@@ -30,12 +32,14 @@ var _defaultRawConfig = RawClashConfig{
 type ClashConfig struct {
 	Nameservers map[string]constant.Nameserver
 	Rules       []constant.Rule
+	Filters     map[string][]constant.Filter
 }
 
 type RawClashConfig struct {
-	Nameservers      []map[string]any `yaml:"nameservers"`
-	NameserverGroups []map[string]any `yaml:"nameserver-groups"`
-	Rules            []string         `yaml:"rules"`
+	Nameservers      []map[string]any      `yaml:"nameservers"`
+	NameserverGroups []map[string]any      `yaml:"nameserver-groups"`
+	Rules            []string              `yaml:"rules"`
+	Filters          []map[string][]string `yaml:"filters"`
 
 	GeoXUrl GeoXUrl `yaml:"geox-url"`
 }
@@ -75,7 +79,13 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 	}
 	cfg.Nameservers = nameservers
 
-	rules, err := parseRules(rawCfg.Rules)
+	filters, err := parseFilters(rawCfg)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Filters = filters
+
+	rules, err := parseRules(rawCfg.Rules, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +129,7 @@ func parseNameservers(cfg *RawClashConfig) (nameservers map[string]constant.Name
 	return nameservers, nil
 }
 
-func parseRules(rulesConfig []string) ([]constant.Rule, error) {
+func parseRules(rulesConfig []string, filters map[string][]constant.Filter) ([]constant.Rule, error) {
 	var rules []constant.Rule
 
 	// parse Rules
@@ -152,7 +162,7 @@ func parseRules(rulesConfig []string) ([]constant.Rule, error) {
 		params = rule[l:]
 
 		params = common.TrimArr(params)
-		parsed, parseErr := R.ParseRule(ruleName, payload, target, params)
+		parsed, parseErr := R.ParseRule(ruleName, payload, target, params, filters)
 		if parsed == nil {
 			continue
 		}
@@ -164,4 +174,48 @@ func parseRules(rulesConfig []string) ([]constant.Rule, error) {
 	}
 
 	return rules, nil
+}
+
+func parseFilters(rawConfig *RawClashConfig) (map[string][]constant.Filter, error) {
+	filters := make(map[string][]constant.Filter, len(rawConfig.Filters))
+	for _, filterGroup := range rawConfig.Filters {
+		// check element in filterGroup only one and get key
+		if len(filterGroup) != 1 {
+			return nil, fmt.Errorf("filter group format invalid")
+		}
+
+		filterName := extractFilterName(filterGroup)
+		filterNum := len(filterGroup[filterName])
+		if filterNum == 0 {
+			return nil, fmt.Errorf("filter group %s is empty", filterName)
+		}
+
+		fs := make([]constant.Filter, filterNum)
+		for idx, rawFilter := range filterGroup[filterName] {
+			rawFilterArray := common.TrimArr(strings.Split(rawFilter, ","))
+			if len(rawFilterArray) != 2 {
+				return nil, fmt.Errorf("filter[%d] %s format invalid", idx, rawFilter)
+			}
+
+			filterType := strings.ToUpper(rawFilterArray[0])
+			payload := rawFilterArray[1]
+			f, err := filter.ParseFilter(filterType, payload)
+			if err != nil {
+				return nil, fmt.Errorf("filter[%d] %s error: %s", idx, rawFilter, err.Error())
+			}
+			fs[idx] = f
+		}
+
+		filters[filterName] = fs
+	}
+	return filters, nil
+}
+
+func extractFilterName(filterGroup map[string][]string) string {
+	var filterName string
+	for k := range filterGroup {
+		filterName = k
+		break
+	}
+	return filterName
 }

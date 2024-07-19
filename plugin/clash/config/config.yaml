@@ -15,10 +15,10 @@ nameserver-groups:
     nameservers:
       - aliyun-1
       - aliyun-2
-  #- name: fallback
-  #  type: fallback
-  #  default-nameserver: direct
-  #  fallback-nameserver: reliable
+  - name: fallback
+    type: fallback
+    default-nameserver: aliyun-1
+    fallback-nameserver: aliyun-2
 
 rules:
   - TYPE,HTTPS,REJECT
@@ -40,12 +40,15 @@ rules:
 
   - RULE-SET,providername,proxy
 
-  # - FALLBACK,cn-filter,fallback
-  - FINAL,round-robin
+  - FALLBACK,cn-filter,fallback
+  #- FINAL,round-robin
 
 filters:
   - cn-filter:
+      - IP-CIDR,180.101.0.0/16
       - IP-CIDR,127.0.0.0/8
-      - IP-SUFFIX,8.8.8.8/24
-      - IP-ASN,13335
-      - GEOIP,CN
+      #- IP-SUFFIX,8.8.8.8/24
+      #- IP-ASN,13335
+      #- GEOIP,CN
+  - test-filter:
+      - IP-CIDR, 127.0.0.1/16

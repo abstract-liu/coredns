@@ -77,7 +77,7 @@ func ParseNSGroup(config map[string]any, nameservers map[string]constant.Nameser
 	}
 
 	groupName := groupOption.Name
-	if len(groupOption.Nameservers) == 0 {
+	if groupOption.Type != "fallback" && len(groupOption.Nameservers) == 0 {
 		return nil, fmt.Errorf("%s: %w", groupName, errMissProxy)
 	}
 

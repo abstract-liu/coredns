@@ -39,9 +39,11 @@ func (t *Tunnel) Handle(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
 		defaultAnswer, err := fallbackNS.DefaultQuery(ctx, msg)
 		if err == nil {
 			if !fallbackRule.ShouldFallback(defaultAnswer) {
+				log.Infof("fallback normal, use default ns: [%s]", fallbackNS.DefaultNS.Name())
 				return defaultAnswer, nil
 			}
 		}
+		log.Infof("fallback filter miss, use fallback ns: [%s]", fallbackNS.FallbackNS.Name())
 		return fallbackNS.FallbackQuery(ctx, msg)
 	}
 	return ns.Query(ctx, msg)

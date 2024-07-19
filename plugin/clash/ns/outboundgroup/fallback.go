@@ -10,8 +10,8 @@ import (
 
 type Fallback struct {
 	*GroupBase
-	defaultNS  constant.Nameserver
-	fallbackNS constant.Nameserver
+	DefaultNS  constant.Nameserver
+	FallbackNS constant.Nameserver
 }
 
 type FallbackOption struct {
@@ -25,11 +25,11 @@ func (fb *Fallback) Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
 }
 
 func (fb *Fallback) DefaultQuery(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
-	return fb.defaultNS.Query(ctx, msg)
+	return fb.DefaultNS.Query(ctx, msg)
 }
 
 func (fb *Fallback) FallbackQuery(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
-	return fb.fallbackNS.Query(ctx, msg)
+	return fb.FallbackNS.Query(ctx, msg)
 }
 
 func NewFallback(option *FallbackOption, nameservers map[string]constant.Nameserver) (*Fallback, error) {
@@ -44,7 +44,7 @@ func NewFallback(option *FallbackOption, nameservers map[string]constant.Nameser
 				NSType: constant.FALLBACK_NS,
 			}),
 		},
-		defaultNS:  nameservers[option.DefaultNS],
-		fallbackNS: nameservers[option.FallbackNS],
+		DefaultNS:  nameservers[option.DefaultNS],
+		FallbackNS: nameservers[option.FallbackNS],
 	}, nil
 }

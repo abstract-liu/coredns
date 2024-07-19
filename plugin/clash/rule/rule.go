@@ -1,12 +1,13 @@
 package rule
 
 import (
+	"fmt"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/rule/logic"
 	"github.com/coredns/coredns/plugin/clash/rule/single"
 )
 
-func ParseRule(ruleType, payload, target string, params []string) (rule constant.Rule, err error) {
+func ParseRule(ruleType, payload, target string, params []string, filters map[string][]constant.Filter) (rule constant.Rule, err error) {
 	switch ruleType {
 	case "DOMAIN":
 		rule = single.NewDomain(payload, target)
@@ -17,7 +18,10 @@ func ParseRule(ruleType, payload, target string, params []string) (rule constant
 	case "TYPE":
 		rule = single.NewType(payload, target)
 	case "FALLBACK":
-		rule = logic.NewFallback(nil, target)
+		if filters == nil || filters[payload] == nil {
+			return nil, fmt.Errorf("fallback rule[%s] error: filters not found", payload)
+		}
+		rule = logic.NewFallback(filters[payload], target)
 	default:
 		// TODO: ignore now
 		return nil, nil
