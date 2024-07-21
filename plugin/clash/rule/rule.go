@@ -13,6 +13,8 @@ func ParseRule(ruleType, payload, target string, params []string, filters map[st
 		rule = single.NewDomain(payload, target)
 	case "DOMAIN-SUFFIX":
 		rule = single.NewDomainSuffix(payload, target)
+	case "DOMAIN-KEYWORD":
+		rule = single.NewDomainKeyword(payload, target)
 	case "FINAL":
 		rule = single.NewFinal(target)
 	case "TYPE":
