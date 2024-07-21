@@ -5,6 +5,7 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/component/mmdb"
 	"github.com/coredns/coredns/plugin/clash/config"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"os"
@@ -15,6 +16,7 @@ import (
 var log = clog.NewWithPlugin(constant.PluginName)
 
 type PluginConfig struct {
+	dir  string
 	path string
 
 	modifiedTime time.Time
@@ -104,7 +106,24 @@ func parsePluginConfig(c *caddy.Controller) (*PluginConfig, error) {
 		return nil, c.Errf("unable to parse clash config file '%s', %v", pluginConfig.path, err)
 	}
 
+	err = initMMDB()
+	if nil != err {
+		return nil, c.Errf("unable to init mmdb, %v", err)
+	}
+
 	return pluginConfig, nil
+}
+
+func initMMDB() error {
+	if _, err := os.Stat(constant.MMDB_PATH); os.IsNotExist(err) {
+		clog.Infof("Can't find MMDB, start download")
+		if err := mmdb.DownloadMMDB(); err != nil {
+			return err
+		}
+	} else {
+		clog.Infof("Load MMDB file: %s", constant.MMDB_PATH)
+	}
+	return nil
 }
 
 func readClashConfig(pluginConfig *PluginConfig) error {
@@ -123,7 +142,7 @@ func readClashConfig(pluginConfig *PluginConfig) error {
 	if err != nil {
 		return err
 	}
-	pluginConfig.clashConfig, err = config.Parse(data)
+	pluginConfig.clashConfig, err = config.Parse(path, data)
 
 	return err
 }

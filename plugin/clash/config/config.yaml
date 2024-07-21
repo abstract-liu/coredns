@@ -45,10 +45,9 @@ rules:
 
 filters:
   - cn-filter:
-      - IP-CIDR,180.101.0.0/16
       - IP-CIDR,127.0.0.0/8
+      - GEOIP,CN
       #- IP-SUFFIX,8.8.8.8/24
       #- IP-ASN,13335
-      #- GEOIP,CN
   - test-filter:
       - IP-CIDR, 127.0.0.1/16

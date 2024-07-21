@@ -8,12 +8,11 @@ import (
 	"github.com/coredns/coredns/plugin/clash/ns"
 	"github.com/coredns/coredns/plugin/clash/ns/outbound"
 	R "github.com/coredns/coredns/plugin/clash/rule"
-	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"gopkg.in/yaml.v3"
+	"os"
+	"path/filepath"
 	"strings"
 )
-
-var log = clog.NewWithPlugin("clash")
 
 var _defaultRawConfig = RawClashConfig{
 	Nameservers:      []map[string]any{},
@@ -51,12 +50,14 @@ type GeoXUrl struct {
 	GeoSite string `yaml:"geosite" json:"geosite"`
 }
 
-func Parse(buf []byte) (*ClashConfig, error) {
+func Parse(configPath string, buf []byte) (*ClashConfig, error) {
 	rawCfg, err := UnmarshalRawConfig(buf)
 	if err != nil {
 		return nil, err
 	}
 
+	dirPath := filepath.Dir(configPath) + string(os.PathSeparator)
+	constant.MMDB_PATH = dirPath + "geoip.metadb"
 	return ParseRawConfig(rawCfg)
 }
 
@@ -72,6 +73,7 @@ func UnmarshalRawConfig(buf []byte) (*RawClashConfig, error) {
 
 func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 	cfg := &ClashConfig{}
+	constant.MMDB_URL = rawCfg.GeoXUrl.Mmdb
 
 	nameservers, err := parseNameservers(rawCfg)
 	if err != nil {

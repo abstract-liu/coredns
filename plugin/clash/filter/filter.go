@@ -14,6 +14,10 @@ func ParseFilter(filterType, payload string) (filter constant.Filter, err error)
 		}
 	case "IP-ASN":
 	case "GEOIP":
+		filter, err = ip.NewGEOIP(payload)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, nil
 	}
