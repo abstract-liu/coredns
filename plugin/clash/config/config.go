@@ -103,6 +103,9 @@ func parseNameservers(cfg *RawClashConfig) (nameservers map[string]constant.Name
 	// parse Nameservers
 	for idx, mapping := range cfg.Nameservers {
 		ns, err := ns.ParseNameserver(mapping)
+		if nil == ns {
+			continue
+		}
 		if err != nil {
 			return nil, fmt.Errorf("nameserver %d: %w", idx, err)
 		}

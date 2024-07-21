@@ -50,6 +50,13 @@ func ParseNameserver(mapping map[string]any) (constant.Nameserver, error) {
 			break
 		}
 		ns, err = outbound.NewTlsNs(*tlsOption)
+	case "https":
+		httpsOption := &outbound.HttpsOption{}
+		err = decoder.Decode(mapping, httpsOption)
+		if err != nil {
+			break
+		}
+		ns, err = outbound.NewHttpsNs(*httpsOption)
 	case "reject":
 		rejectOption := &outbound.RejectOption{}
 		err = decoder.Decode(mapping, rejectOption)

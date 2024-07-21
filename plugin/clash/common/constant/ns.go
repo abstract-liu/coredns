@@ -9,6 +9,7 @@ const (
 	UDP NameserverType = iota
 	TCP
 	TLS
+	HTTPS
 	REJECT
 
 	RANDOM
@@ -32,6 +33,8 @@ func (ns NameserverType) String() string {
 		return "TCP"
 	case TLS:
 		return "TLS"
+	case HTTPS:
+		return "HTTPS"
 	case REJECT:
 		return "REJECT"
 	case ROUND_ROBIN:
