@@ -1,9 +1,9 @@
 package vars
 
 import (
-	"time"
-
 	"github.com/coredns/coredns/request"
+	pnet "net"
+	"time"
 )
 
 // Report reports the metrics data associated with request. This function is exported because it is also
@@ -23,6 +23,12 @@ func Report(server string, req request.Request, zone, view, rcode, plugin string
 
 	qType := qTypeString(req.QType())
 	RequestCount.WithLabelValues(server, zone, view, net, fam, qType).Inc()
+
+	if len(req.Req.Question) > 0 {
+		hostname := req.Req.Question[0].Name
+		remoteHost, _, _ := pnet.SplitHostPort(req.RemoteAddr())
+		RequestByHostCount.WithLabelValues(hostname, qType, remoteHost).Inc()
+	}
 
 	RequestDuration.WithLabelValues(server, zone, view).Observe(time.Since(start).Seconds())
 
