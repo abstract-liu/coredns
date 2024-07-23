@@ -16,13 +16,6 @@ var (
 		Help:      "Counter of DNS requests made per zone, protocol and family.",
 	}, []string{"server", "zone", "view", "proto", "family", "type"})
 
-	RequestByHostCount = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: plugin.Namespace,
-		Subsystem: subsystem,
-		Name:      "requests_by_host_total",
-		Help:      "Counter of DNS requests per hostname",
-	}, []string{"hostname", "type", "remote_addr"})
-
 	RequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace:                   plugin.Namespace,
 		Subsystem:                   subsystem,

@@ -5,9 +5,12 @@ import (
 	"github.com/coredns/coredns/plugin/clash/common"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/filter"
+	"github.com/coredns/coredns/plugin/clash/host"
+	"github.com/coredns/coredns/plugin/clash/metrics"
 	"github.com/coredns/coredns/plugin/clash/ns"
 	"github.com/coredns/coredns/plugin/clash/ns/outbound"
 	R "github.com/coredns/coredns/plugin/clash/rule"
+	"github.com/coredns/coredns/plugin/pkg/log"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
@@ -19,6 +22,7 @@ var _defaultRawConfig = RawClashConfig{
 	NameserverGroups: []map[string]any{},
 	Rules:            []string{},
 	Filters:          []map[string][]string{},
+	Hosts:            []string{},
 
 	GeoXUrl: GeoXUrl{
 		Mmdb:    "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb",
@@ -32,6 +36,7 @@ type ClashConfig struct {
 	Nameservers map[string]constant.Nameserver
 	Rules       []constant.Rule
 	Filters     map[string][]constant.Filter
+	Hosts       *constant.HostTable
 }
 
 type RawClashConfig struct {
@@ -39,6 +44,7 @@ type RawClashConfig struct {
 	NameserverGroups []map[string]any      `yaml:"nameserver-groups"`
 	Rules            []string              `yaml:"rules"`
 	Filters          []map[string][]string `yaml:"filters"`
+	Hosts            []string              `yaml:"hosts"`
 
 	GeoXUrl GeoXUrl `yaml:"geox-url"`
 }
@@ -49,6 +55,8 @@ type GeoXUrl struct {
 	ASN     string `yaml:"asn" json:"asn"`
 	GeoSite string `yaml:"geosite" json:"geosite"`
 }
+
+var clog = log.NewWithPlugin(constant.PluginName)
 
 func Parse(configPath string, buf []byte) (*ClashConfig, error) {
 	rawCfg, err := UnmarshalRawConfig(buf)
@@ -92,6 +100,12 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 		return nil, err
 	}
 	cfg.Rules = rules
+
+	hosts, err := parseHosts(rawCfg)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Hosts = hosts
 
 	return cfg, nil
 }
@@ -214,6 +228,28 @@ func parseFilters(rawConfig *RawClashConfig) (map[string][]constant.Filter, erro
 		filters[filterName] = fs
 	}
 	return filters, nil
+}
+
+func parseHosts(rawConfig *RawClashConfig) (*constant.HostTable, error) {
+	hosts := constant.NewHostTable()
+	for idx, rawHost := range rawConfig.Hosts {
+		hostElements := common.TrimArr(strings.Split(rawHost, ","))
+		if len(hostElements) == 1 {
+			clog.Infof("file hosts not supported yet")
+			continue
+		} else if len(hostElements) == 2 {
+			parsedHost := host.ParseHost(hostElements[0], hostElements[1])
+			if parsedHost != nil {
+				hosts.AddHost(parsedHost.Hostname(), parsedHost.IPs(), parsedHost.Type())
+			} else {
+				return nil, fmt.Errorf("host[%d] %s format invalid", idx, rawHost)
+			}
+		} else {
+			return nil, fmt.Errorf("host[%d] %s format invalid", idx, rawHost)
+		}
+	}
+	metrics.HostEntries.WithLabelValues().Set(float64(hosts.Size()))
+	return hosts, nil
 }
 
 func extractFilterName(filterGroup map[string][]string) string {

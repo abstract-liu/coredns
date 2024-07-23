@@ -17,6 +17,7 @@ nameservers:
     address: udp://192.168.2.234
 
 hosts:
+  - grafana.abstract-liu.cn,192.168.2.4
   - https://s3.abstract-liu.cn/general/hosts.list
 
 nameserver-groups:
