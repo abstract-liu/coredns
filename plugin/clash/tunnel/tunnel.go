@@ -2,106 +2,144 @@ package tunnel
 
 import (
 	"context"
+	"github.com/coredns/coredns/plugin/clash/common"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
-	"github.com/coredns/coredns/plugin/clash/ns/outboundgroup"
-	"github.com/coredns/coredns/plugin/clash/rule/logic"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
+	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
+	"net"
+	"strings"
 	"sync"
 )
 
 var (
-	mode      = constant.RULE
-	configMux sync.RWMutex
+	log          = clog.NewWithPlugin(constant.PluginName)
+	GlobalTunnel = Tunnel{
+		mode: constant.RULE,
 
-	rules       []constant.Rule
-	nameservers = make(map[string]constant.Nameserver)
-
-	log = clog.NewWithPlugin(constant.PluginName)
+		nameservers: make(map[string]constant.Nameserver),
+		rules:       make([]constant.Rule, 0),
+	}
 )
 
 type Tunnel struct {
+	mode      constant.TunnelMode
+	configMux sync.RWMutex
+
+	rules       []constant.Rule
+	nameservers map[string]constant.Nameserver
+	hosts       *constant.HostTable
 }
 
-var GlobalTunnel Tunnel
-
-func (t *Tunnel) Handle(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
-	ns, r, err := matchRuleNs(msg)
-	if err != nil {
-		return nil, err
-	}
-	logMatchData(msg, ns, r)
-
-	if r.RuleType() == constant.FALLBACK {
-		fallbackRule := r.(*logic.Fallback)
-		fallbackNS := ns.(*outboundgroup.Fallback)
-		// TODO: reformat to channel style
-		defaultAnswer, err := fallbackNS.DefaultQuery(ctx, msg)
-		if err == nil {
-			if !fallbackRule.ShouldFallback(defaultAnswer) {
-				log.Infof("fallback normal, use default ns: [%s]", fallbackNS.DefaultNS.Name())
-				return defaultAnswer, nil
-			}
-		}
-		log.Infof("fallback filter miss, use fallback ns: [%s]", fallbackNS.FallbackNS.Name())
-		return fallbackNS.FallbackQuery(ctx, msg)
-	}
-	return ns.Query(ctx, msg)
-}
-
-func UpdateRules(newRules []constant.Rule) {
-	configMux.Lock()
-	rules = newRules
-	configMux.Unlock()
-}
-
-func UpdateNameservers(newNameservers map[string]constant.Nameserver) {
-	configMux.Lock()
-	nameservers = newNameservers
-	configMux.Unlock()
-}
-
-func logMatchData(msg *dns.Msg, ns constant.Nameserver, r constant.Rule) {
-	question := msg.Question[0]
-	log.Infof("query: [%s]-[%s], match rule: [%s], use ns: [%s]", question.Name, dns.TypeToString[question.Qtype], r.RuleType().String(), ns.Name())
-}
-
-func matchRuleNs(r *dns.Msg) (ns constant.Nameserver, rule constant.Rule, err error) {
-	switch mode {
+func (t *Tunnel) Handle(ctx context.Context, r request.Request) int {
+	switch t.mode {
 	case constant.DIRECT:
 	case constant.GLOBAL:
-		log.Debug("mode not supported now")
+		log.Errorf("mode[%s] not supported yet", t.mode.String())
+		return dns.RcodeServerFailure
 	default:
-		ns, rule, err = match(r)
 	}
-	return
+
+	if t.handleStaticHost(ctx, r) {
+		return dns.RcodeSuccess
+	}
+
+	if t.handleRule(ctx, r) {
+		return dns.RcodeSuccess
+	}
+
+	return dns.RcodeServerFailure
 }
 
-func match(msg *dns.Msg) (constant.Nameserver, constant.Rule, error) {
-	configMux.RLock()
-	defer configMux.RUnlock()
-	/*
-		if node, ok := resolver.DefaultHosts.Search(metadata.Host, false); ok {
-			metadata.DstIP, _ = node.RandIP()
-			resolved = true
-		}
-	*/
-
-	if len(msg.Question) != 1 {
-		log.Error("dns query more than one")
-		return nameservers["DIRECT"], nil, nil
+func (t *Tunnel) handleStaticHost(ctx context.Context, req request.Request) bool {
+	ips := []net.IP{}
+	answers := []dns.RR{}
+	switch req.QType() {
+	case dns.TypeA:
+		ips = t.lookupStaticHost(req.Name(), constant.A)
+		answers = common.A(req.Name(), 3600, ips)
+	case dns.TypeAAAA:
+		ips = t.lookupStaticHost(req.Name(), constant.AAAA)
+		answers = common.AAAA(req.Name(), 3600, ips)
 	}
 
-	for _, r := range rules {
-		if matched, ada := r.Match(msg); matched {
-			matchNS, ok := nameservers[ada]
-			if !ok {
-				continue
-			}
+	if !t.isStaticHostExist(req.Name()) {
+		return false
+	}
 
-			return matchNS, r, nil
+	m := new(dns.Msg)
+	m.SetReply(req.Req)
+	m.Authoritative = true
+	m.Answer = answers
+	req.W.WriteMsg(m)
+	log.Infof("Query: [%s]-[%s], Use static host: %v", req.Name(), dns.TypeToString[req.QType()], ips)
+
+	return true
+}
+
+func (t *Tunnel) handleRule(ctx context.Context, req request.Request) bool {
+	var (
+		err         error
+		requestMsg  = req.Req
+		responseMsg *dns.Msg
+	)
+	nameserver, matchDetail, err := t.match(requestMsg)
+	if err != nil {
+		log.Error("match rule error: %v", err)
+		return false
+	}
+	question := requestMsg.Question[0]
+	log.Infof("Query: [%s]-[%s], Match rule: [%s], Use ns: [%s]", question.Name, dns.TypeToString[question.Qtype], matchDetail, nameserver.Name())
+
+	responseMsg, err = nameserver.Query(ctx, requestMsg)
+	req.W.WriteMsg(responseMsg)
+
+	return true
+}
+
+func (t *Tunnel) lookupStaticHost(host string, hostType constant.HostType) []net.IP {
+	host = strings.ToLower(host)
+	return t.hosts.LookupHost(host, hostType)
+}
+
+func (t *Tunnel) isStaticHostExist(host string) bool {
+	host = strings.ToLower(host)
+	if len(t.hosts.LookupHost(host, constant.A)) > 0 {
+		return true
+	}
+	if len(t.hosts.LookupHost(host, constant.AAAA)) > 0 {
+		return true
+	}
+	return false
+}
+
+func (t *Tunnel) UpdateRules(newRules []constant.Rule) {
+	t.configMux.Lock()
+	t.rules = newRules
+	t.configMux.Unlock()
+}
+
+func (t *Tunnel) UpdateNameservers(newNameservers map[string]constant.Nameserver) {
+	t.configMux.Lock()
+	t.nameservers = newNameservers
+	t.configMux.Unlock()
+}
+
+func (t *Tunnel) UpdateHosts(newHosts *constant.HostTable) {
+	t.configMux.Lock()
+	t.hosts = newHosts
+	t.configMux.Unlock()
+}
+
+func (t *Tunnel) match(msg *dns.Msg) (constant.Nameserver, string, error) {
+	t.configMux.RLock()
+	defer t.configMux.RUnlock()
+
+	for _, r := range t.rules {
+		if matched, matchNS, matchDetail := r.Match(msg); matched {
+			return matchNS, matchDetail, nil
 		}
 	}
 
-	return nameservers["DIRECT"], nil, nil
+	return t.nameservers["DIRECT"], "No Rule Match, Use DIRECT", nil
 }

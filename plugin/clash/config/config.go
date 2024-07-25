@@ -12,9 +12,8 @@ import (
 	R "github.com/coredns/coredns/plugin/clash/rule"
 	"github.com/coredns/coredns/plugin/pkg/log"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path/filepath"
 	"strings"
+	"time"
 )
 
 var _defaultRawConfig = RawClashConfig{
@@ -37,6 +36,13 @@ type ClashConfig struct {
 	Rules       []constant.Rule
 	Filters     map[string][]constant.Filter
 	Hosts       *constant.HostTable
+
+	GeoXUrl  GeoXUrl
+	MMDBPath string
+
+	ModifiedTime time.Time
+	Size         int64
+	Path         string
 }
 
 type RawClashConfig struct {
@@ -58,31 +64,13 @@ type GeoXUrl struct {
 
 var clog = log.NewWithPlugin(constant.PluginName)
 
-func Parse(configPath string, buf []byte) (*ClashConfig, error) {
+func Parse(buf []byte) (*ClashConfig, error) {
 	rawCfg, err := UnmarshalRawConfig(buf)
 	if err != nil {
 		return nil, err
 	}
 
-	dirPath := filepath.Dir(configPath) + string(os.PathSeparator)
-	constant.MMDB_PATH = dirPath + "geoip.metadb"
-	return ParseRawConfig(rawCfg)
-}
-
-func UnmarshalRawConfig(buf []byte) (*RawClashConfig, error) {
-	rawCfg := _defaultRawConfig
-	err := yaml.Unmarshal(buf, &rawCfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return &rawCfg, nil
-}
-
-func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 	cfg := &ClashConfig{}
-	constant.MMDB_URL = rawCfg.GeoXUrl.Mmdb
-
 	nameservers, err := parseNameservers(rawCfg)
 	if err != nil {
 		return nil, err
@@ -95,7 +83,7 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 	}
 	cfg.Filters = filters
 
-	rules, err := parseRules(rawCfg.Rules, filters)
+	rules, err := parseRules(rawCfg.Rules, nameservers, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +95,20 @@ func ParseRawConfig(rawCfg *RawClashConfig) (*ClashConfig, error) {
 	}
 	cfg.Hosts = hosts
 
+	cfg.GeoXUrl = rawCfg.GeoXUrl
+
+	clog.Infof("Parsed Clash Config Success! Total with %d nameservers, %d rules, %d filters, %d hosts", len(nameservers), len(rules), len(filters), hosts.Size())
 	return cfg, nil
+}
+
+func UnmarshalRawConfig(buf []byte) (*RawClashConfig, error) {
+	rawCfg := _defaultRawConfig
+	err := yaml.Unmarshal(buf, &rawCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rawCfg, nil
 }
 
 func parseNameservers(cfg *RawClashConfig) (nameservers map[string]constant.Nameserver, err error) {
@@ -148,7 +149,7 @@ func parseNameservers(cfg *RawClashConfig) (nameservers map[string]constant.Name
 	return nameservers, nil
 }
 
-func parseRules(rulesConfig []string, filters map[string][]constant.Filter) ([]constant.Rule, error) {
+func parseRules(rulesConfig []string, nameservers map[string]constant.Nameserver, filters map[string][]constant.Filter) ([]constant.Rule, error) {
 	var rules []constant.Rule
 
 	// parse Rules
@@ -181,7 +182,7 @@ func parseRules(rulesConfig []string, filters map[string][]constant.Filter) ([]c
 		params = rule[l:]
 
 		params = common.TrimArr(params)
-		parsed, parseErr := R.ParseRule(ruleName, payload, target, params, filters)
+		parsed, parseErr := R.ParseRule(ruleName, payload, target, params, nameservers, filters)
 		if parsed == nil {
 			continue
 		}
@@ -235,7 +236,7 @@ func parseHosts(rawConfig *RawClashConfig) (*constant.HostTable, error) {
 	for idx, rawHost := range rawConfig.Hosts {
 		hostElements := common.TrimArr(strings.Split(rawHost, ","))
 		if len(hostElements) == 1 {
-			clog.Infof("file hosts not supported yet")
+			clog.Warningf("File hosts not supported yet: %s", rawHost)
 			continue
 		} else if len(hostElements) == 2 {
 			parsedHost := host.ParseHost(hostElements[0], hostElements[1])

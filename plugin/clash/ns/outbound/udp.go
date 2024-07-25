@@ -21,7 +21,7 @@ type UdpOption struct {
 
 func (ns *UdpNs) Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
 	resp, rtt, err := ns.client.Exchange(msg, ns.canonicalAddr)
-	clog.Infof("ns: [%s], query: [%s], rtt: %s", ns.Name(), msg.Question[0].Name, rtt)
+	clog.Debugf("ns: [%s], query: [%s], rtt: %s", ns.Name(), msg.Question[0].Name, rtt)
 	return resp, err
 }
 

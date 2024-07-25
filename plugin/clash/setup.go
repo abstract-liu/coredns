@@ -1,28 +1,21 @@
 package clash
 
 import (
+	"fmt"
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
-	"github.com/coredns/coredns/plugin/clash/component/mmdb"
 	"github.com/coredns/coredns/plugin/clash/config"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 var log = clog.NewWithPlugin(constant.PluginName)
 
 type PluginConfig struct {
-	dir  string
 	path string
-
-	modifiedTime time.Time
-	size         int64
-
-	clashConfig *config.ClashConfig
 }
 
 func init() { plugin.Register(constant.PluginName, setup) }
@@ -61,12 +54,13 @@ func parseClash(c *caddy.Controller) (*Clash, error) {
 		}
 		i += 1
 
-		cfg, err := parsePluginConfig(c)
+		pluginCfg, err := parsePluginConfig(c)
 		if err != nil {
 			return nil, err
 		}
 
-		clash, err = NewClash(cfg)
+		clashCfg, err := parseClashConfig(pluginCfg.path)
+		clash, err = NewClash(clashCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -76,73 +70,44 @@ func parseClash(c *caddy.Controller) (*Clash, error) {
 }
 
 func parsePluginConfig(c *caddy.Controller) (*PluginConfig, error) {
-	config := dnsserver.GetConfig(c)
+	defaultConfig := dnsserver.GetConfig(c)
 	pluginConfig := &PluginConfig{}
 
 	args := c.RemainingArgs()
 	if len(args) != 1 {
-		return nil, c.Errf("invalid number of config files: %d", len(args))
+		return nil, c.Errf("invalid number of pluginConfig files: %d", len(args))
 	}
-	configFilename := args[0]
-	pluginConfig.path = configFilename
-	if !filepath.IsAbs(configFilename) && config.Root != "" {
-		pluginConfig.path = filepath.Join(config.Root, configFilename)
-	}
-
-	s, err := os.Stat(pluginConfig.path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Warningf("File does not exist: %s", pluginConfig.path)
-		} else {
-			return nil, c.Errf("unable to access clash config file '%s': %v", pluginConfig.path, err)
-		}
-	}
-	if s != nil && s.IsDir() {
-		log.Warningf("Clash config file %q is a directory", pluginConfig.path)
-	}
-
-	err = readClashConfig(pluginConfig)
-	if nil != err {
-		return nil, c.Errf("unable to parse clash config file '%s', %v", pluginConfig.path, err)
-	}
-
-	err = initMMDB()
-	if nil != err {
-		return nil, c.Errf("unable to init mmdb, %v", err)
+	path := args[0]
+	pluginConfig.path = path
+	if !filepath.IsAbs(path) && defaultConfig.Root != "" {
+		pluginConfig.path = filepath.Join(defaultConfig.Root, path)
 	}
 
 	return pluginConfig, nil
 }
 
-func initMMDB() error {
-	if _, err := os.Stat(constant.MMDB_PATH); os.IsNotExist(err) {
-		clog.Infof("Can't find MMDB, start download")
-		if err := mmdb.DownloadMMDB(); err != nil {
-			return err
-		}
-	} else {
-		clog.Infof("Load MMDB file: %s", constant.MMDB_PATH)
-	}
-	return nil
-}
-
-func readClashConfig(pluginConfig *PluginConfig) error {
-	path := pluginConfig.path
+func parseClashConfig(path string) (*config.ClashConfig, error) {
 	stat, err := os.Stat(path)
 	if err != nil {
-		return err
+		if os.IsNotExist(err) {
+			log.Warningf("File does not exist: %stat", path)
+		} else {
+			return nil, fmt.Errorf("unable to access clash config file '%s': %v", path, err)
+		}
 	}
-	if pluginConfig.modifiedTime.Equal(stat.ModTime()) && pluginConfig.size == stat.Size() {
-		return err
+	if stat != nil && stat.IsDir() {
+		return nil, fmt.Errorf("clash config file %s is a directory", path)
 	}
-	pluginConfig.modifiedTime = stat.ModTime()
-	pluginConfig.size = stat.Size()
 
-	data, err := os.ReadFile(path)
+	fileData, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	pluginConfig.clashConfig, err = config.Parse(path, data)
 
-	return err
+	clashConfig, err := config.Parse(fileData)
+	if nil != err {
+		return nil, fmt.Errorf("unable to parse clash config file '%s', %v", path, err)
+	}
+
+	return clashConfig, nil
 }

@@ -1,6 +1,7 @@
 package single
 
 import (
+	"fmt"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/miekg/dns"
 	"strings"
@@ -9,25 +10,23 @@ import (
 type DomainKeyword struct {
 	*Base
 	keyword string
-	ns      string
+	ns      constant.Nameserver
 }
 
-func (d *DomainKeyword) RuleType() constant.RuleType {
-	return constant.DOMAIN_KEYWORD
-}
-
-func (d *DomainKeyword) NS() string {
+func (d *DomainKeyword) NS() constant.Nameserver {
 	return d.ns
 }
 
-func (d *DomainKeyword) Match(msg *dns.Msg) (bool, string) {
+func (d *DomainKeyword) Match(msg *dns.Msg) (bool, constant.Nameserver, string) {
 	domain := msg.Question[0].Name
-	return strings.Contains(domain, d.keyword), d.ns
+	return strings.Contains(domain, d.keyword), d.ns, fmt.Sprintf("%s-%s", d.RuleType().String(), d.keyword)
 }
 
-func NewDomainKeyword(keyword string, ns string) *DomainKeyword {
+func NewDomainKeyword(keyword string, ns constant.Nameserver) *DomainKeyword {
 	return &DomainKeyword{
-		Base:    &Base{},
+		Base: &Base{
+			RT: constant.DOMAIN_KEYWORD,
+		},
 		keyword: dns.Fqdn(keyword),
 		ns:      ns,
 	}

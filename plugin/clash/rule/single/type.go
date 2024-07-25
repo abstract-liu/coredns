@@ -1,6 +1,7 @@
 package single
 
 import (
+	"fmt"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/miekg/dns"
 )
@@ -8,30 +9,29 @@ import (
 type Type struct {
 	*Base
 	tp uint16
-	ns string
+	ns constant.Nameserver
 }
 
-func (d *Type) RuleType() constant.RuleType {
-	return constant.TYPE
-}
-
-func (d *Type) NS() string {
+func (d *Type) NS() constant.Nameserver {
 	return d.ns
 }
 
-func (d *Type) Match(msg *dns.Msg) (bool, string) {
-	return d.tp == msg.Question[0].Qtype, d.ns
+func (d *Type) Match(msg *dns.Msg) (bool, constant.Nameserver, string) {
+	return d.tp == msg.Question[0].Qtype, d.ns,
+		fmt.Sprintf("%s-%s", d.RuleType().String(), dns.TypeToString[d.tp])
 }
 
-func NewType(tpStr string, ns string) *Type {
+func NewType(tpStr string, ns constant.Nameserver) *Type {
 	tp, exist := dns.StringToType[tpStr]
 	if !exist {
 		return nil
 	}
 
 	return &Type{
-		Base: &Base{},
-		tp:   tp,
-		ns:   ns,
+		Base: &Base{
+			RT: constant.TYPE,
+		},
+		tp: tp,
+		ns: ns,
 	}
 }

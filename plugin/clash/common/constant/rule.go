@@ -34,6 +34,6 @@ const (
 
 type Rule interface {
 	RuleType() RuleType
-	NS() string
-	Match(msg *dns.Msg) (bool, string)
+	NS() Nameserver
+	Match(msg *dns.Msg) (bool, Nameserver, string)
 }
