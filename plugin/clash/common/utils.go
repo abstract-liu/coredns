@@ -76,3 +76,16 @@ func AAAA(zone string, ttl uint32, ips []net.IP) []dns.RR {
 	}
 	return answers
 }
+
+func RRsToIPs(rr []dns.RR) []netip.Addr {
+	ips := []netip.Addr{}
+	for _, r := range rr {
+		switch a := r.(type) {
+		case *dns.AAAA:
+			ips = append(ips, IpToAddr(a.AAAA))
+		case *dns.A:
+			ips = append(ips, IpToAddr(a.A))
+		}
+	}
+	return ips
+}

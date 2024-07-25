@@ -5,9 +5,12 @@ import (
 	"github.com/coredns/coredns/plugin/clash/common"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/miekg/dns"
+	"time"
 )
 
 const _udpPort = 53
+const _timeout = 5 * time.Second
+const _udpSize = 4096
 
 type UdpNs struct {
 	*Base

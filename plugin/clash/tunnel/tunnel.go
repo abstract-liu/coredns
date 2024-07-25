@@ -89,10 +89,15 @@ func (t *Tunnel) handleRule(ctx context.Context, req request.Request) bool {
 		return false
 	}
 	question := requestMsg.Question[0]
-	log.Infof("Query: [%s]-[%s], Match rule: [%s], Use ns: [%s]", question.Name, dns.TypeToString[question.Qtype], matchDetail, nameserver.Name())
 
 	responseMsg, err = nameserver.Query(ctx, requestMsg)
-	req.W.WriteMsg(responseMsg)
+	if err != nil {
+		log.Errorf("Query Error: %s, [%s]-[%s], Match rule: [%s], Use ns: [%s]", err, question.Name, dns.TypeToString[question.Qtype], matchDetail, nameserver.Name())
+		return false
+	} else {
+		log.Infof("Query Success: [%s]-[%s], Match rule: [%s], Use ns: [%s], Result: %v", question.Name, dns.TypeToString[question.Qtype], matchDetail, nameserver.Name(), common.RRsToIPs(responseMsg.Answer))
+		req.W.WriteMsg(responseMsg)
+	}
 
 	return true
 }
