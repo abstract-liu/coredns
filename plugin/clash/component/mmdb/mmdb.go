@@ -45,7 +45,7 @@ func DownloadMMDB() (err error) {
 func IPInstance() IPReader {
 	IPonce.Do(func() {
 		mmdbPath := constant.MMDB_PATH
-		log.Infof("Load MMDB file: %s", mmdbPath)
+		log.Infof("Load MMDB Success! DB Path: %s", mmdbPath)
 		mmdb, err := maxminddb.Open(mmdbPath)
 		if err != nil {
 			log.Errorf("Can't load MMDB: %s", err.Error())

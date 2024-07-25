@@ -97,7 +97,7 @@ func Parse(buf []byte) (*ClashConfig, error) {
 
 	cfg.GeoXUrl = rawCfg.GeoXUrl
 
-	clog.Infof("Parsed Clash Config Success! Total with %d nameservers, %d rules, %d filters, %d hosts", len(nameservers), len(rules), len(filters), hosts.Size())
+	clog.Infof("Parse Clash Config Success! Total with %d nameservers, %d rules, %d filters, %d hosts", len(nameservers), len(rules), len(filters), hosts.Size())
 	return cfg, nil
 }
 

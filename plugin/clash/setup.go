@@ -70,7 +70,6 @@ func parseClash(c *caddy.Controller) (*Clash, error) {
 }
 
 func parsePluginConfig(c *caddy.Controller) (*PluginConfig, error) {
-	defaultConfig := dnsserver.GetConfig(c)
 	pluginConfig := &PluginConfig{}
 
 	args := c.RemainingArgs()
@@ -79,9 +78,12 @@ func parsePluginConfig(c *caddy.Controller) (*PluginConfig, error) {
 	}
 	path := args[0]
 	pluginConfig.path = path
-	if !filepath.IsAbs(path) && defaultConfig.Root != "" {
-		pluginConfig.path = filepath.Join(defaultConfig.Root, path)
+	if !filepath.IsAbs(path) {
+		rootCorefilePath := c.Dispenser.File()
+		rootPath := filepath.Dir(rootCorefilePath)
+		pluginConfig.path = filepath.Join(rootPath, path)
 	}
+	clog.Infof("Parse Plugin Config Success! Plugin Config Path: %s", pluginConfig.path)
 
 	return pluginConfig, nil
 }
