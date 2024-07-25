@@ -39,6 +39,17 @@ func (clash *Clash) LookupStaticHost(host string, hostType constant.HostType) []
 	return clash.config.clashConfig.Hosts.LookupHost(host, hostType)
 }
 
+func (clash *Clash) StaticHostExist(host string) bool {
+	host = strings.ToLower(host)
+	if len(clash.config.clashConfig.Hosts.LookupHost(host, constant.A)) > 0 {
+		return true
+	}
+	if len(clash.config.clashConfig.Hosts.LookupHost(host, constant.AAAA)) > 0 {
+		return true
+	}
+	return false
+}
+
 func (clash *Clash) Name() string {
 	return constant.PluginName
 }
@@ -52,22 +63,8 @@ func (clash *Clash) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	state := request.Request{W: w, Req: r}
 	metrics.Report(state)
 
-	ips := []net.IP{}
-	answers := []dns.RR{}
-	switch state.QType() {
-	case dns.TypeA:
-		ips = clash.LookupStaticHost(state.Name(), constant.A)
-		answers = a(state.Name(), 3600, ips)
-	case dns.TypeAAAA:
-		ips = clash.LookupStaticHost(state.Name(), constant.AAAA)
-		answers = aaaa(state.Name(), 3600, ips)
-	}
-	if len(ips) > 0 {
-		m := new(dns.Msg)
-		m.SetReply(r)
-		m.Authoritative = true
-		m.Answer = answers
-		w.WriteMsg(m)
+	succHandleStatic := clash.handleStaticHost(state, w)
+	if succHandleStatic {
 		return dns.RcodeSuccess, nil
 	}
 
@@ -85,6 +82,30 @@ func (clash *Clash) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	}
 
 	return 0, nil
+}
+
+func (c *Clash) handleStaticHost(state request.Request, w dns.ResponseWriter) bool {
+	ips := []net.IP{}
+	answers := []dns.RR{}
+	switch state.QType() {
+	case dns.TypeA:
+		ips = c.LookupStaticHost(state.Name(), constant.A)
+		answers = a(state.Name(), 3600, ips)
+	case dns.TypeAAAA:
+		ips = c.LookupStaticHost(state.Name(), constant.AAAA)
+		answers = aaaa(state.Name(), 3600, ips)
+	}
+
+	if !c.StaticHostExist(state.Name()) {
+		return false
+	}
+
+	m := new(dns.Msg)
+	m.SetReply(state.Req)
+	m.Authoritative = true
+	m.Answer = answers
+	w.WriteMsg(m)
+	return true
 }
 
 // OnStartup starts a goroutines for all proxies.
