@@ -89,3 +89,7 @@ func RRsToIPs(rr []dns.RR) []netip.Addr {
 	}
 	return ips
 }
+
+func IsHTTPResource(url string) bool {
+	return strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")
+}

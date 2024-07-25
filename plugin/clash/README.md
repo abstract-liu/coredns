@@ -4,11 +4,13 @@
 - [ ] rule list -> trie or set
 
 ## FEATURES:
-- [ ] HTTP类型规则资源拉取与更新
+- [x] HTTP类型规则资源拉取与更新
 - [ ] GeoIP数据库更新
 - [ ] HTTP类型HOST规则拉取与更新
 - [ ] LoadBalance 查询组
 - [ ] DOT/DOT支持
+- [ ] rest api
+  - [ ] /api/v1/
 
 ## BUGS:
 - [x] Config File Path 问题
