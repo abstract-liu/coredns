@@ -146,6 +146,19 @@ func parseRemoteClashConfig(path string) (*config.ClashConfig, error) {
 	return clashConfig, nil
 }
 
+func UpdateRemoteClashConfig() error {
+	clashConfig, same, err := clashRemoteConfigFetcher.Update()
+	if same {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	onUpdateClashConfig(clashConfig)
+	return nil
+}
+
 func onUpdateClashConfig(config *config.ClashConfig) {
 	log.Warning("Clash Config Updated, OnUpdate method not implemented yet")
 }

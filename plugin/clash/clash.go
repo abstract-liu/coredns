@@ -7,6 +7,7 @@ import (
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/component/mmdb"
 	"github.com/coredns/coredns/plugin/clash/config"
+	"github.com/coredns/coredns/plugin/clash/hub"
 	"github.com/coredns/coredns/plugin/clash/metrics"
 	"github.com/coredns/coredns/plugin/clash/tunnel"
 	"github.com/coredns/coredns/request"
@@ -75,9 +76,13 @@ func (c *Clash) updateConfig() error {
 func (c *Clash) OnStartup() (err error) {
 	c.applyConfig(c.config)
 
-	err = c.initMMDB()
-	if nil != err {
+	if err = c.initMMDB(); err != nil {
 		return fmt.Errorf("unable to init mmdb, %v", err)
+	}
+
+	if err = hub.Start(); err != nil {
+		return fmt.Errorf("unable to start hub, %v", err)
+
 	}
 
 	log.Info("Initializing CoreDNS 'Clash' list update routines...")

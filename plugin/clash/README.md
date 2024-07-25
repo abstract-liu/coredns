@@ -10,7 +10,7 @@
 - [ ] LoadBalance 查询组
 - [ ] DOT/DOT支持
 - [ ] rest api
-  - [ ] /api/v1/
+  - [ ] /api/v1/UpdateRemoteConfig
 
 ## BUGS:
 - [x] Config File Path 问题
