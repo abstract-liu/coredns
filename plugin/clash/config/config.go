@@ -114,6 +114,7 @@ func UnmarshalRawConfig(buf []byte) (*RawClashConfig, error) {
 func parseNameservers(cfg *RawClashConfig) (nameservers map[string]constant.Nameserver, err error) {
 	nameservers = make(map[string]constant.Nameserver)
 	nameservers["REJECT"] = outbound.NewRejectNs()
+	nameservers["reject"] = outbound.NewRejectNs()
 
 	// parse Nameservers
 	for idx, mapping := range cfg.Nameservers {
@@ -183,11 +184,11 @@ func parseRules(rulesConfig []string, nameservers map[string]constant.Nameserver
 
 		params = common.TrimArr(params)
 		parsed, parseErr := R.ParseRule(ruleName, payload, target, params, nameservers, filters)
-		if parsed == nil {
-			continue
-		}
 		if parseErr != nil {
 			return nil, fmt.Errorf("rule[%d] [%s] error: %s", idx, line, parseErr.Error())
+		}
+		if parsed == nil {
+			continue
 		}
 
 		rules = append(rules, parsed)

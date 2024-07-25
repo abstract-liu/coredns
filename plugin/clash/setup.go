@@ -60,6 +60,10 @@ func parseClash(c *caddy.Controller) (*Clash, error) {
 		}
 
 		clashCfg, err := parseClashConfig(pluginCfg.path)
+		if err != nil {
+			return nil, err
+		}
+
 		clash, err = NewClash(clashCfg)
 		if err != nil {
 			return nil, err
@@ -108,7 +112,7 @@ func parseClashConfig(path string) (*config.ClashConfig, error) {
 
 	clashConfig, err := config.Parse(fileData)
 	if nil != err {
-		return nil, fmt.Errorf("unable to parse clash config file '%s', %v", path, err)
+		return nil, fmt.Errorf("Unable to parse clash config file '%s', %v", path, err)
 	}
 
 	return clashConfig, nil
