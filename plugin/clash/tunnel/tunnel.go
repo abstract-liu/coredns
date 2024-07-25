@@ -10,6 +10,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -83,7 +84,10 @@ func (t *Tunnel) handleRule(ctx context.Context, req request.Request) bool {
 		requestMsg  = req.Req
 		responseMsg *dns.Msg
 	)
+	// time how long it take to match the rule
+	startTime := time.Now()
 	nameserver, matchDetail, err := t.match(requestMsg)
+	matchDoneTime := time.Now()
 	if err != nil {
 		log.Error("match rule error: %v", err)
 		return false
@@ -95,7 +99,7 @@ func (t *Tunnel) handleRule(ctx context.Context, req request.Request) bool {
 		log.Errorf("Query Error: %s, [%s]-[%s], Match rule: [%s], Use ns: [%s]", err, question.Name, dns.TypeToString[question.Qtype], matchDetail, nameserver.Name())
 		return false
 	} else {
-		log.Infof("Query Success: [%s]-[%s], Match rule: [%s], Use ns: [%s], Result: %v", question.Name, dns.TypeToString[question.Qtype], matchDetail, nameserver.Name(), common.RRsToIPs(responseMsg.Answer))
+		log.Infof("Query Success: [%s]-[%s], Takes %s to match rule: [%s], Use ns: [%s], Result: %v", question.Name, dns.TypeToString[question.Qtype], matchDoneTime.Sub(startTime).String(), matchDetail, nameserver.Name(), common.RRsToIPs(responseMsg.Answer))
 		req.W.WriteMsg(responseMsg)
 	}
 
