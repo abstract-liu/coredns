@@ -18,31 +18,40 @@ import (
 	"time"
 )
 
-var _defaultRawConfig = RawClashConfig{
-	Nameservers:      []map[string]any{},
-	NameserverGroups: []map[string]any{},
-	Rules:            []string{},
-	Filters:          []map[string][]string{},
-	Hosts:            []string{},
-
-	GeoXUrl: GeoXUrl{
-		Mmdb:    "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb",
-		ASN:     "https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb",
-		GeoIp:   "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat",
-		GeoSite: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat",
-	},
-}
-
 const (
 	_defaultClashConfigUpdateInterval = 24 * time.Hour
+	_defaultRestfulAPIAddress         = "0.0.0.0:8080"
 )
 
 var (
 	log                      = clog.NewWithPlugin(constant.PluginName)
 	clashRemoteConfigFetcher *resource.Fetcher[*ClashConfig]
+	_defaultRawConfig        = RawClashConfig{
+		Mode:               constant.RULE,
+		ExternalController: _defaultRestfulAPIAddress,
+
+		Nameservers:      []map[string]any{},
+		NameserverGroups: []map[string]any{},
+		Rules:            []string{},
+		Filters:          []map[string][]string{},
+		Hosts:            []string{},
+
+		GeoXUrl: GeoXUrl{
+			Mmdb:    "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb",
+			ASN:     "https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb",
+			GeoIp:   "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat",
+			GeoSite: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat",
+		},
+	}
 )
 
+type GeneralConfig struct {
+	Mode               constant.TunnelMode
+	ExternalController string
+}
+
 type ClashConfig struct {
+	General     *GeneralConfig
 	Nameservers map[string]constant.Nameserver
 	Rules       []constant.Rule
 	Filters     map[string][]constant.Filter
@@ -57,6 +66,9 @@ type ClashConfig struct {
 }
 
 type RawClashConfig struct {
+	Mode               constant.TunnelMode `yaml:"mode"`
+	ExternalController string              `yaml:"external-controller"`
+
 	Nameservers      []map[string]any      `yaml:"nameservers"`
 	NameserverGroups []map[string]any      `yaml:"nameserver-groups"`
 	Rules            []string              `yaml:"rules"`
@@ -141,6 +153,12 @@ func parse(buf []byte) (*ClashConfig, error) {
 	}
 
 	cfg := &ClashConfig{}
+	generalConfig, err := parseGeneralConfig(rawCfg)
+	if err != nil {
+		return nil, err
+	}
+	cfg.General = generalConfig
+
 	nameservers, err := parseNameservers(rawCfg)
 	if err != nil {
 		return nil, err
@@ -179,6 +197,14 @@ func UnmarshalRawConfig(buf []byte) (*RawClashConfig, error) {
 	}
 
 	return &rawCfg, nil
+}
+
+func parseGeneralConfig(cfg *RawClashConfig) (*GeneralConfig, error) {
+	generalCfg := &GeneralConfig{
+		Mode:               cfg.Mode,
+		ExternalController: cfg.ExternalController,
+	}
+	return generalCfg, nil
 }
 
 func parseNameservers(cfg *RawClashConfig) (nameservers map[string]constant.Nameserver, err error) {

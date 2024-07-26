@@ -83,7 +83,7 @@ func (c *Clash) OnStartup() (err error) {
 		return fmt.Errorf("unable to init mmdb, %v", err)
 	}
 
-	if err = hub.Start(); err != nil {
+	if err = hub.Start(c.config.General.ExternalController); err != nil {
 		return fmt.Errorf("unable to start hub, %v", err)
 
 	}

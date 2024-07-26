@@ -1,3 +1,4 @@
+external-controller: "0.0.0.0:9090"
 nameservers:
   - name: aliyun-1
     address: udp://223.5.5.5
