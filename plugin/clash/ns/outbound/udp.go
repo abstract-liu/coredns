@@ -1,6 +1,5 @@
 package outbound
 
-import "C"
 import (
 	"context"
 	"github.com/coredns/coredns/plugin/clash/common"
