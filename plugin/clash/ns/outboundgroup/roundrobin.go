@@ -6,12 +6,13 @@ import (
 	"github.com/coredns/coredns/plugin/clash/ns/outbound"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/miekg/dns"
+	"sync"
 )
 
 type RoundRobin struct {
 	*GroupBase
-	// TODO: 考虑一下并发这里
-	idx int
+	lock sync.Mutex
+	idx  int
 }
 
 type RoundRobinOption struct {
@@ -21,9 +22,12 @@ type RoundRobinOption struct {
 var log = clog.NewWithPlugin(constant.PluginName)
 
 func (r *RoundRobin) Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
+	r.lock.Lock()
 	currentNS := r.nameservers[r.idx]
-	log.Debugf("RoundRobin query: [%s], use ns: [%s]", msg.Question[0].Name, currentNS.Name())
 	r.idx = (r.idx + 1) % len(r.nameservers)
+	r.lock.Unlock()
+
+	log.Debugf("RoundRobin query: [%s], use ns: [%s]", msg.Question[0].Name, currentNS.Name())
 	return currentNS.Query(ctx, msg)
 }
 
