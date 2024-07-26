@@ -10,10 +10,13 @@ import (
 	"github.com/coredns/coredns/plugin/clash/hub"
 	"github.com/coredns/coredns/plugin/clash/metrics"
 	"github.com/coredns/coredns/plugin/clash/tunnel"
+	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
 	"os"
 )
+
+var log = clog.NewWithPlugin(constant.PluginName)
 
 type Clash struct {
 	tunnel *tunnel.Tunnel

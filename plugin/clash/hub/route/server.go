@@ -21,7 +21,7 @@ func router() *chi.Mux {
 	})
 	r.Use(corsM.Handler)
 	r.Group(func(r chi.Router) {
-		r.Mount("config", configRouter())
+		r.Mount("/config", configRouter())
 	})
 	return r
 }

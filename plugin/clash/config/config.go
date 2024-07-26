@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"github.com/coredns/coredns/plugin/clash/common"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
+	"github.com/coredns/coredns/plugin/clash/component/resource"
 	"github.com/coredns/coredns/plugin/clash/filter"
 	"github.com/coredns/coredns/plugin/clash/host"
 	"github.com/coredns/coredns/plugin/clash/metrics"
 	"github.com/coredns/coredns/plugin/clash/ns"
 	"github.com/coredns/coredns/plugin/clash/ns/outbound"
 	R "github.com/coredns/coredns/plugin/clash/rule"
-	"github.com/coredns/coredns/plugin/pkg/log"
+	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"gopkg.in/yaml.v3"
+	"os"
 	"strings"
 	"time"
 )
@@ -30,6 +32,15 @@ var _defaultRawConfig = RawClashConfig{
 		GeoSite: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat",
 	},
 }
+
+const (
+	_defaultClashConfigUpdateInterval = 24 * time.Hour
+)
+
+var (
+	log                      = clog.NewWithPlugin(constant.PluginName)
+	clashRemoteConfigFetcher *resource.Fetcher[*ClashConfig]
+)
 
 type ClashConfig struct {
 	Nameservers map[string]constant.Nameserver
@@ -62,9 +73,68 @@ type GeoXUrl struct {
 	GeoSite string `yaml:"geosite" json:"geosite"`
 }
 
-var clog = log.NewWithPlugin(constant.PluginName)
+func ParseClashConfig(path string) (*ClashConfig, error) {
+	if common.IsHTTPResource(path) {
+		return parseRemoteClashConfig(path)
+	} else {
+		return parseLocalClashConfig(path)
+	}
+}
 
-func Parse(buf []byte) (*ClashConfig, error) {
+func parseLocalClashConfig(path string) (*ClashConfig, error) {
+	stat, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Warningf("File does not exist: %stat", path)
+		} else {
+			return nil, fmt.Errorf("unable to access clash config file '%s': %v", path, err)
+		}
+	}
+	if stat != nil && stat.IsDir() {
+		return nil, fmt.Errorf("clash config file %s is a directory", path)
+	}
+
+	fileData, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	clashConfig, err := parse(fileData)
+	if nil != err {
+		return nil, fmt.Errorf("unable to parse clash config file '%s', %v", path, err)
+	}
+
+	return clashConfig, nil
+}
+
+func parseRemoteClashConfig(path string) (*ClashConfig, error) {
+	clashRemoteConfigFetcher = resource.NewFetcher[*ClashConfig]("clash-config", path, _defaultClashConfigUpdateInterval, parse, onUpdateClashConfig)
+	clashConfig, err := clashRemoteConfigFetcher.Initial()
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch clash config file '%s', %v", path, err)
+	}
+
+	return clashConfig, nil
+}
+
+func UpdateRemoteClashConfig() error {
+	clashConfig, same, err := clashRemoteConfigFetcher.Update()
+	if same {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	onUpdateClashConfig(clashConfig)
+	return nil
+}
+
+func onUpdateClashConfig(config *ClashConfig) {
+	log.Warning("Clash Config Updated, OnUpdate method not implemented yet")
+}
+
+func parse(buf []byte) (*ClashConfig, error) {
 	rawCfg, err := UnmarshalRawConfig(buf)
 	if err != nil {
 		return nil, err

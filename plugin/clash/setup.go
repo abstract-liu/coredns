@@ -1,27 +1,14 @@
 package clash
 
 import (
-	"fmt"
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/clash/common"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
-	"github.com/coredns/coredns/plugin/clash/component/resource"
 	"github.com/coredns/coredns/plugin/clash/config"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
-	"os"
 	"path/filepath"
-	"time"
-)
-
-const (
-	_defaultClashConfigUpdateInterval = 24 * time.Hour
-)
-
-var (
-	log                      = clog.NewWithPlugin(constant.PluginName)
-	clashRemoteConfigFetcher *resource.Fetcher[*config.ClashConfig]
 )
 
 type PluginConfig struct {
@@ -69,7 +56,7 @@ func parseClash(c *caddy.Controller) (*Clash, error) {
 			return nil, err
 		}
 
-		clashCfg, err := parseClashConfig(pluginCfg.path)
+		clashCfg, err := config.ParseClashConfig(pluginCfg.path)
 		if err != nil {
 			return nil, err
 		}
@@ -100,65 +87,4 @@ func parsePluginConfig(c *caddy.Controller) (*PluginConfig, error) {
 	clog.Infof("Parse Plugin Config Success! Plugin Config Path: %s", pluginConfig.path)
 
 	return pluginConfig, nil
-}
-
-func parseClashConfig(path string) (*config.ClashConfig, error) {
-	if common.IsHTTPResource(path) {
-		return parseRemoteClashConfig(path)
-	} else {
-		return parseLocalClashConfig(path)
-	}
-}
-
-func parseLocalClashConfig(path string) (*config.ClashConfig, error) {
-	stat, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Warningf("File does not exist: %stat", path)
-		} else {
-			return nil, fmt.Errorf("unable to access clash config file '%s': %v", path, err)
-		}
-	}
-	if stat != nil && stat.IsDir() {
-		return nil, fmt.Errorf("clash config file %s is a directory", path)
-	}
-
-	fileData, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	clashConfig, err := config.Parse(fileData)
-	if nil != err {
-		return nil, fmt.Errorf("unable to parse clash config file '%s', %v", path, err)
-	}
-
-	return clashConfig, nil
-}
-
-func parseRemoteClashConfig(path string) (*config.ClashConfig, error) {
-	clashRemoteConfigFetcher = resource.NewFetcher[*config.ClashConfig]("clash-config", path, _defaultClashConfigUpdateInterval, config.Parse, onUpdateClashConfig)
-	clashConfig, err := clashRemoteConfigFetcher.Initial()
-	if err != nil {
-		return nil, fmt.Errorf("unable to fetch clash config file '%s', %v", path, err)
-	}
-
-	return clashConfig, nil
-}
-
-func UpdateRemoteClashConfig() error {
-	clashConfig, same, err := clashRemoteConfigFetcher.Update()
-	if same {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	onUpdateClashConfig(clashConfig)
-	return nil
-}
-
-func onUpdateClashConfig(config *config.ClashConfig) {
-	log.Warning("Clash Config Updated, OnUpdate method not implemented yet")
 }
