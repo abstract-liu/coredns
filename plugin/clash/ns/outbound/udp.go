@@ -1,5 +1,6 @@
 package outbound
 
+import "C"
 import (
 	"context"
 	"github.com/coredns/coredns/plugin/clash/common"
@@ -23,9 +24,28 @@ type UdpOption struct {
 }
 
 func (ns *UdpNs) Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
-	resp, rtt, err := ns.client.Exchange(msg, ns.canonicalAddr)
-	clog.Debugf("ns: [%s], query: [%s], rtt: %s", ns.Name(), msg.Question[0].Name, rtt)
-	return resp, err
+	type result struct {
+		msg *dns.Msg
+		rtt time.Duration
+		err error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		resp, rtt, err := ns.client.ExchangeContext(ctx, msg, ns.canonicalAddr)
+		ch <- result{resp, rtt, err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case ret := <-ch:
+		if ret.err != nil {
+			log.Errorf("udp-ns: [%s], query: [%s], error: %v", ns.Name(), msg.Question[0].Name, ret.err)
+		} else {
+			log.Debugf("udp-ns: [%s], query: [%s], rtt: %s", ns.Name(), msg.Question[0].Name, ret.rtt)
+		}
+		return ret.msg, ret.err
+	}
 }
 
 func NewUdpNs(option UdpOption) (*UdpNs, error) {

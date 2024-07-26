@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/ns/outbound"
-	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/miekg/dns"
 	"sync"
 )
@@ -18,8 +17,6 @@ type RoundRobin struct {
 type RoundRobinOption struct {
 	GroupBaseOption
 }
-
-var log = clog.NewWithPlugin(constant.PluginName)
 
 func (r *RoundRobin) Query(ctx context.Context, msg *dns.Msg) (*dns.Msg, error) {
 	r.lock.Lock()

@@ -14,6 +14,7 @@ const (
 
 	RANDOM
 	ROUND_ROBIN
+	FAST
 	FALLBACK_NS
 )
 
@@ -39,6 +40,8 @@ func (ns NameserverType) String() string {
 		return "REJECT"
 	case ROUND_ROBIN:
 		return "ROUND_ROBIN"
+	case FAST:
+		return "FAST"
 	case FALLBACK_NS:
 		return "FALLBACK"
 	default:

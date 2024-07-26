@@ -114,6 +114,13 @@ func ParseNSGroup(config map[string]any, nameservers map[string]constant.Nameser
 			break
 		}
 		group = outboundgroup.NewRoundRobin(roundRobinOpt, usedNameservers)
+	case "fast":
+		fastOpt := &outboundgroup.FastGroupOption{}
+		err = decoder.Decode(config, fastOpt)
+		if err != nil {
+			break
+		}
+		group = outboundgroup.NewFastGroup(fastOpt, usedNameservers)
 	default:
 		return nil, fmt.Errorf("%w: %s", errType, groupOption.Type)
 	}
