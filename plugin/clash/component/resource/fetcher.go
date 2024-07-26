@@ -5,11 +5,14 @@ import (
 	"context"
 	"crypto/md5"
 	"errors"
+	"fmt"
+	"github.com/coredns/coredns/plugin/clash/common"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/samber/lo"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -19,7 +22,8 @@ type Parser[V any] func([]byte) (V, error)
 
 type Fetcher[V any] struct {
 	name     string
-	url      string
+	ft       constant.FetcherType
+	path     string
 	interval time.Duration
 	done     chan struct{}
 	hash     [16]byte
@@ -35,6 +39,10 @@ func (f *Fetcher[V]) Name() string {
 	return f.name
 }
 
+func (f *Fetcher[V]) Type() constant.FetcherType {
+	return f.ft
+}
+
 func (f *Fetcher[V]) Destroy() error {
 	if f.interval > 0 {
 		f.done <- struct{}{}
@@ -43,7 +51,16 @@ func (f *Fetcher[V]) Destroy() error {
 }
 
 func (f *Fetcher[V]) Update() (V, bool, error) {
-	buf, err := f.read()
+	var (
+		buf []byte
+		err error
+	)
+
+	if f.ft == constant.REMOTE_HTTP {
+		buf, err = f.readHTTP()
+	} else {
+		buf, err = f.readLocalFile()
+	}
 	if err != nil {
 		return lo.Empty[V](), false, err
 	}
@@ -66,11 +83,11 @@ func (f *Fetcher[V]) Update() (V, bool, error) {
 	return contents, false, nil
 }
 
-func (f *Fetcher[V]) read() ([]byte, error) {
+func (f *Fetcher[V]) readHTTP() ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
-	request, _ := http.NewRequest(http.MethodGet, f.url, nil)
+	request, _ := http.NewRequest(http.MethodGet, f.path, nil)
 	resp, err := f.httpClient.Do(request.WithContext(ctx))
 	if err != nil {
 		return nil, err
@@ -83,6 +100,28 @@ func (f *Fetcher[V]) read() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return buf, nil
+}
+
+func (f *Fetcher[V]) readLocalFile() ([]byte, error) {
+	stat, err := os.Stat(f.path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("file does not exist: %s", f.path)
+		} else {
+			return nil, fmt.Errorf("unable to access clash config file '%s': %v", f.path, err)
+		}
+	}
+	if stat != nil && stat.IsDir() {
+		return nil, fmt.Errorf("clash config file %s is a directory", f.path)
+	}
+
+	buf, err := os.ReadFile(f.path)
+	if err != nil {
+		return nil, err
+	}
+
 	return buf, nil
 }
 
@@ -121,10 +160,17 @@ func (f *Fetcher[V]) Initial() (V, error) {
 	)
 
 	var contents V
-	if preReadBuf, err = f.read(); err == nil {
-		contents, err = f.parser(preReadBuf)
+	if f.ft == constant.LOCAL_FILE {
+		if preReadBuf, err = f.readLocalFile(); err != nil {
+			return lo.Empty[V](), err
+		}
+	} else {
+		if preReadBuf, err = f.readHTTP(); err != nil {
+			return lo.Empty[V](), err
+		}
 	}
 
+	contents, err = f.parser(preReadBuf)
 	if err != nil {
 		return lo.Empty[V](), err
 	}
@@ -137,10 +183,18 @@ func (f *Fetcher[V]) Initial() (V, error) {
 	return contents, nil
 }
 
-func NewFetcher[V any](name, url string, interval time.Duration, parser Parser[V], onUpdate func(V)) *Fetcher[V] {
+func NewFetcher[V any](name, path string, interval time.Duration, parser Parser[V], onUpdate func(V)) *Fetcher[V] {
+	var ft constant.FetcherType
+	if common.IsHTTPResource(path) {
+		ft = constant.REMOTE_HTTP
+	} else {
+		ft = constant.LOCAL_FILE
+	}
+
 	return &Fetcher[V]{
 		name:       name,
-		url:        url,
+		ft:         ft,
+		path:       path,
 		interval:   interval,
 		done:       make(chan struct{}),
 		parser:     parser,

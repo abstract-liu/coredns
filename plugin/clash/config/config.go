@@ -13,7 +13,6 @@ import (
 	R "github.com/coredns/coredns/plugin/clash/rule"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"gopkg.in/yaml.v3"
-	"os"
 	"strings"
 	"time"
 )
@@ -59,10 +58,6 @@ type ClashConfig struct {
 
 	GeoXUrl  GeoXUrl
 	MMDBPath string
-
-	ModifiedTime time.Time
-	Size         int64
-	Path         string
 }
 
 type RawClashConfig struct {
@@ -86,40 +81,6 @@ type GeoXUrl struct {
 }
 
 func ParseClashConfig(path string) (*ClashConfig, error) {
-	if common.IsHTTPResource(path) {
-		return parseRemoteClashConfig(path)
-	} else {
-		return parseLocalClashConfig(path)
-	}
-}
-
-func parseLocalClashConfig(path string) (*ClashConfig, error) {
-	stat, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Warningf("File does not exist: %stat", path)
-		} else {
-			return nil, fmt.Errorf("unable to access clash config file '%s': %v", path, err)
-		}
-	}
-	if stat != nil && stat.IsDir() {
-		return nil, fmt.Errorf("clash config file %s is a directory", path)
-	}
-
-	fileData, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	clashConfig, err := parse(fileData)
-	if nil != err {
-		return nil, fmt.Errorf("unable to parse clash config file '%s', %v", path, err)
-	}
-
-	return clashConfig, nil
-}
-
-func parseRemoteClashConfig(path string) (*ClashConfig, error) {
 	clashRemoteConfigFetcher = resource.NewFetcher[*ClashConfig]("clash-config", path, _defaultClashConfigUpdateInterval, parse, onUpdateClashConfig)
 	clashConfig, err := clashRemoteConfigFetcher.Initial()
 	if err != nil {
@@ -132,6 +93,7 @@ func parseRemoteClashConfig(path string) (*ClashConfig, error) {
 func UpdateRemoteClashConfig() error {
 	clashConfig, same, err := clashRemoteConfigFetcher.Update()
 	if same {
+		log.Debugf("Clash Config doesn't change")
 		return nil
 	}
 	if err != nil {

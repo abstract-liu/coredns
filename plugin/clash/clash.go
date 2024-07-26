@@ -58,23 +58,6 @@ func (c *Clash) applyConfig(cfg *config.ClashConfig) {
 	c.tunnel.UpdateHosts(cfg.Hosts)
 }
 
-func (c *Clash) updateConfig() error {
-	path := c.config.Path
-	stat, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	if c.config.ModifiedTime.Equal(stat.ModTime()) && c.config.Size == stat.Size() {
-		log.Infof("Clash config file %s has not been modified, since last modifyTime: %v", path, c.config.ModifiedTime)
-		return nil
-	}
-
-	c.config.ModifiedTime = stat.ModTime()
-	c.config.Size = stat.Size()
-	return nil
-}
-
 // OnStartup starts a goroutines for all proxies.
 func (c *Clash) OnStartup() (err error) {
 	c.applyConfig(c.config)
@@ -111,7 +94,7 @@ func (c *Clash) initMMDB() error {
 			return err
 		}
 	} else {
-		log.Infof("Load MMDB file: %s", constant.MMDB_PATH)
+		log.Infof("Load MMDB Success! MMDB File Path: %s", constant.MMDB_PATH)
 	}
 	return nil
 }
