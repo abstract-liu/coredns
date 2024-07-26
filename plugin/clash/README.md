@@ -1,5 +1,6 @@
 ## PERF:
-- [ ] UDP/TCP优化，mihomo似乎没有维持连接，这里看如果tcp是否可以优化
+- [x] UDP/TCP优化，mihomo似乎没有维持连接，这里看如果tcp是否可以优化
+- [ ] ns not support AAAA return quickly
 - [ ] Cache
 - [ ] rule list -> trie or set
 
