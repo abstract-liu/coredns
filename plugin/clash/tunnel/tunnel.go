@@ -20,6 +20,7 @@ var (
 
 		nameservers: make(map[string]constant.Nameserver),
 		rules:       make([]constant.Rule, 0),
+		hosts:       constant.NewHostTable(),
 	}
 )
 
@@ -122,22 +123,39 @@ func (t *Tunnel) isStaticHostExist(host string) bool {
 	return false
 }
 
+func (t *Tunnel) ApplyConfig(cfg *constant.ClashConfig) {
+	t.configMux.Lock()
+	defer t.configMux.Unlock()
+	t.rules = cfg.Rules
+	t.nameservers = cfg.Nameservers
+	t.hosts = cfg.Hosts
+}
+
 func (t *Tunnel) UpdateRules(newRules []constant.Rule) {
 	t.configMux.Lock()
+	preRuleNum := len(t.rules)
+	newRuleNum := len(newRules)
 	t.rules = newRules
 	t.configMux.Unlock()
+	log.Infof("Update Rules Success! Total %d -> %d rules", preRuleNum, newRuleNum)
 }
 
 func (t *Tunnel) UpdateNameservers(newNameservers map[string]constant.Nameserver) {
 	t.configMux.Lock()
+	preNameserverNum := len(t.nameservers)
+	newNameserverNum := len(newNameservers)
 	t.nameservers = newNameservers
 	t.configMux.Unlock()
+	log.Infof("Update Nameservers Success! Total %d -> %d nameservers", preNameserverNum, newNameserverNum)
 }
 
 func (t *Tunnel) UpdateHosts(newHosts *constant.HostTable) {
 	t.configMux.Lock()
+	preHostsNum := t.hosts.Size()
+	newHostsNum := newHosts.Size()
 	t.hosts = newHosts
 	t.configMux.Unlock()
+	log.Infof("Update Hosts Success! Total %d -> %d hosts", preHostsNum, newHostsNum)
 }
 
 func (t *Tunnel) match(msg *dns.Msg) (constant.Nameserver, string, error) {

@@ -6,7 +6,6 @@ import (
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/clash/common/constant"
 	"github.com/coredns/coredns/plugin/clash/component/mmdb"
-	"github.com/coredns/coredns/plugin/clash/config"
 	"github.com/coredns/coredns/plugin/clash/hub"
 	"github.com/coredns/coredns/plugin/clash/metrics"
 	"github.com/coredns/coredns/plugin/clash/tunnel"
@@ -20,12 +19,12 @@ var log = clog.NewWithPlugin(constant.PluginName)
 
 type Clash struct {
 	tunnel *tunnel.Tunnel
-	config *config.ClashConfig
+	config *constant.ClashConfig
 
 	Next plugin.Handler
 }
 
-func NewClash(cfg *config.ClashConfig) (*Clash, error) {
+func NewClash(cfg *constant.ClashConfig) (*Clash, error) {
 	c := &Clash{
 		config: cfg,
 		tunnel: &tunnel.GlobalTunnel,
@@ -52,15 +51,9 @@ func (c *Clash) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	return c.tunnel.Handle(ctx, request.Request{W: w, Req: r}), nil
 }
 
-func (c *Clash) applyConfig(cfg *config.ClashConfig) {
-	c.tunnel.UpdateRules(cfg.Rules)
-	c.tunnel.UpdateNameservers(cfg.Nameservers)
-	c.tunnel.UpdateHosts(cfg.Hosts)
-}
-
 // OnStartup starts a goroutines for all proxies.
 func (c *Clash) OnStartup() (err error) {
-	c.applyConfig(c.config)
+	c.tunnel.ApplyConfig(c.config)
 
 	if err = c.initMMDB(); err != nil {
 		return fmt.Errorf("unable to init mmdb, %v", err)

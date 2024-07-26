@@ -11,6 +11,7 @@ import (
 	"github.com/coredns/coredns/plugin/clash/ns"
 	"github.com/coredns/coredns/plugin/clash/ns/outbound"
 	R "github.com/coredns/coredns/plugin/clash/rule"
+	"github.com/coredns/coredns/plugin/clash/tunnel"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"gopkg.in/yaml.v3"
 	"strings"
@@ -24,8 +25,8 @@ const (
 
 var (
 	log                      = clog.NewWithPlugin(constant.PluginName)
-	clashRemoteConfigFetcher *resource.Fetcher[*ClashConfig]
-	_defaultRawConfig        = RawClashConfig{
+	clashRemoteConfigFetcher *resource.Fetcher[*constant.ClashConfig]
+	_defaultRawConfig        = constant.RawClashConfig{
 		Mode:               constant.RULE,
 		ExternalController: _defaultRestfulAPIAddress,
 
@@ -35,7 +36,7 @@ var (
 		Filters:          []map[string][]string{},
 		Hosts:            []string{},
 
-		GeoXUrl: GeoXUrl{
+		GeoXUrl: constant.GeoXUrl{
 			Mmdb:    "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb",
 			ASN:     "https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb",
 			GeoIp:   "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat",
@@ -44,44 +45,8 @@ var (
 	}
 )
 
-type GeneralConfig struct {
-	Mode               constant.TunnelMode
-	ExternalController string
-}
-
-type ClashConfig struct {
-	General     *GeneralConfig
-	Nameservers map[string]constant.Nameserver
-	Rules       []constant.Rule
-	Filters     map[string][]constant.Filter
-	Hosts       *constant.HostTable
-
-	GeoXUrl  GeoXUrl
-	MMDBPath string
-}
-
-type RawClashConfig struct {
-	Mode               constant.TunnelMode `yaml:"mode"`
-	ExternalController string              `yaml:"external-controller"`
-
-	Nameservers      []map[string]any      `yaml:"nameservers"`
-	NameserverGroups []map[string]any      `yaml:"nameserver-groups"`
-	Rules            []string              `yaml:"rules"`
-	Filters          []map[string][]string `yaml:"filters"`
-	Hosts            []string              `yaml:"hosts"`
-
-	GeoXUrl GeoXUrl `yaml:"geox-url"`
-}
-
-type GeoXUrl struct {
-	GeoIp   string `yaml:"geoip" json:"geoip"`
-	Mmdb    string `yaml:"mmdb" json:"mmdb"`
-	ASN     string `yaml:"asn" json:"asn"`
-	GeoSite string `yaml:"geosite" json:"geosite"`
-}
-
-func ParseClashConfig(path string) (*ClashConfig, error) {
-	clashRemoteConfigFetcher = resource.NewFetcher[*ClashConfig]("clash-config", path, _defaultClashConfigUpdateInterval, parse, onUpdateClashConfig)
+func ParseClashConfig(path string) (*constant.ClashConfig, error) {
+	clashRemoteConfigFetcher = resource.NewFetcher[*constant.ClashConfig]("clash-config", path, _defaultClashConfigUpdateInterval, parse, onUpdateClashConfig)
 	clashConfig, err := clashRemoteConfigFetcher.Initial()
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch clash config file '%s', %v", path, err)
@@ -104,17 +69,19 @@ func UpdateRemoteClashConfig() error {
 	return nil
 }
 
-func onUpdateClashConfig(config *ClashConfig) {
-	log.Warning("Clash Config Updated, OnUpdate method not implemented yet")
+func onUpdateClashConfig(config *constant.ClashConfig) {
+	tunnel.GlobalTunnel.UpdateNameservers(config.Nameservers)
+	tunnel.GlobalTunnel.UpdateRules(config.Rules)
+	tunnel.GlobalTunnel.UpdateHosts(config.Hosts)
 }
 
-func parse(buf []byte) (*ClashConfig, error) {
+func parse(buf []byte) (*constant.ClashConfig, error) {
 	rawCfg, err := UnmarshalRawConfig(buf)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg := &ClashConfig{}
+	cfg := &constant.ClashConfig{}
 	generalConfig, err := parseGeneralConfig(rawCfg)
 	if err != nil {
 		return nil, err
@@ -151,7 +118,7 @@ func parse(buf []byte) (*ClashConfig, error) {
 	return cfg, nil
 }
 
-func UnmarshalRawConfig(buf []byte) (*RawClashConfig, error) {
+func UnmarshalRawConfig(buf []byte) (*constant.RawClashConfig, error) {
 	rawCfg := _defaultRawConfig
 	err := yaml.Unmarshal(buf, &rawCfg)
 	if err != nil {
@@ -161,15 +128,15 @@ func UnmarshalRawConfig(buf []byte) (*RawClashConfig, error) {
 	return &rawCfg, nil
 }
 
-func parseGeneralConfig(cfg *RawClashConfig) (*GeneralConfig, error) {
-	generalCfg := &GeneralConfig{
+func parseGeneralConfig(cfg *constant.RawClashConfig) (*constant.GeneralConfig, error) {
+	generalCfg := &constant.GeneralConfig{
 		Mode:               cfg.Mode,
 		ExternalController: cfg.ExternalController,
 	}
 	return generalCfg, nil
 }
 
-func parseNameservers(cfg *RawClashConfig) (nameservers map[string]constant.Nameserver, err error) {
+func parseNameservers(cfg *constant.RawClashConfig) (nameservers map[string]constant.Nameserver, err error) {
 	nameservers = make(map[string]constant.Nameserver)
 	nameservers["REJECT"] = outbound.NewRejectNs()
 	nameservers["reject"] = outbound.NewRejectNs()
@@ -255,7 +222,7 @@ func parseRules(rulesConfig []string, nameservers map[string]constant.Nameserver
 	return rules, nil
 }
 
-func parseFilters(rawConfig *RawClashConfig) (map[string][]constant.Filter, error) {
+func parseFilters(rawConfig *constant.RawClashConfig) (map[string][]constant.Filter, error) {
 	filters := make(map[string][]constant.Filter, len(rawConfig.Filters))
 	for _, filterGroup := range rawConfig.Filters {
 		// check element in filterGroup only one and get key
@@ -290,7 +257,7 @@ func parseFilters(rawConfig *RawClashConfig) (map[string][]constant.Filter, erro
 	return filters, nil
 }
 
-func parseHosts(rawConfig *RawClashConfig) (*constant.HostTable, error) {
+func parseHosts(rawConfig *constant.RawClashConfig) (*constant.HostTable, error) {
 	hosts := constant.NewHostTable()
 	for idx, rawHost := range rawConfig.Hosts {
 		hostElements := common.TrimArr(strings.Split(rawHost, ","))
