@@ -190,7 +190,6 @@ func NewFetcher[V any](name, path string, interval time.Duration, parser Parser[
 	} else {
 		ft = constant.LOCAL_FILE
 	}
-
 	return &Fetcher[V]{
 		name:       name,
 		ft:         ft,

@@ -35,3 +35,7 @@ type GeoXUrl struct {
 	ASN     string `yaml:"asn" json:"asn"`
 	GeoSite string `yaml:"geosite" json:"geosite"`
 }
+
+var (
+	ConfigDir string
+)

@@ -12,7 +12,7 @@ import (
 )
 
 type PluginConfig struct {
-	path string
+	configPath string
 }
 
 func init() { plugin.Register(constant.PluginName, setup) }
@@ -56,7 +56,7 @@ func parseClash(c *caddy.Controller) (*Clash, error) {
 			return nil, err
 		}
 
-		clashCfg, err := config.ParseClashConfig(pluginCfg.path)
+		clashCfg, err := config.ParseClashConfig(pluginCfg.configPath)
 		if err != nil {
 			return nil, err
 		}
@@ -78,13 +78,14 @@ func parsePluginConfig(c *caddy.Controller) (*PluginConfig, error) {
 		return nil, c.Errf("invalid number of pluginConfig files: %d", len(args))
 	}
 	path := args[0]
-	pluginConfig.path = path
+	pluginConfig.configPath = path
+	rootCorefilePath := c.Dispenser.File()
+	rootPath := filepath.Dir(rootCorefilePath)
+	constant.ConfigDir = rootPath
 	if !filepath.IsAbs(path) && !common.IsHTTPResource(path) {
-		rootCorefilePath := c.Dispenser.File()
-		rootPath := filepath.Dir(rootCorefilePath)
-		pluginConfig.path = filepath.Join(rootPath, path)
+		pluginConfig.configPath = filepath.Join(rootPath, path)
 	}
-	clog.Infof("Parse Plugin Config Success! Plugin Config Path: %s", pluginConfig.path)
+	clog.Infof("Parse Plugin Config Success! Plugin Config Path: %s", pluginConfig.configPath)
 
 	return pluginConfig, nil
 }

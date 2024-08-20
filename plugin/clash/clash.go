@@ -77,7 +77,7 @@ func (c *Clash) initMMDB() error {
 	if c.config.MMDBPath != "" {
 		constant.MMDB_PATH = c.config.MMDBPath
 	} else {
-		constant.MMDB_PATH = "/tmp/geoip.metadb"
+		constant.MMDB_PATH = constant.ConfigDir + constant.MMDB_FILE_DEFAULT_PATH
 	}
 	constant.MMDB_URL = c.config.GeoXUrl.Mmdb
 
